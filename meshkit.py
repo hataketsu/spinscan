@@ -155,18 +155,25 @@ def cap_boundaries(m: trimesh.Trimesh) -> trimesh.Trimesh:
         loops = boundary_loops(m)
         if not loops:
             break
-        verts = list(m.vertices)
-        faces = list(m.faces)
+        # Only the fans are built as Python lists. list(m.vertices) turns every
+        # row into its own numpy object -- around fifteen times the array's own
+        # footprint, which on a multi-million-face candidate is hundreds of MB
+        # per pass for data that is copied back out unchanged.
+        base = len(m.vertices)
+        new_verts, new_faces = [], []
         for loop in loops:
             if len(loop) < 3:
                 continue
-            centre = m.vertices[loop].mean(axis=0)
-            ci = len(verts)
-            verts.append(centre)
+            ci = base + len(new_verts)
+            new_verts.append(m.vertices[loop].mean(axis=0))
             for a, b in zip(loop, loop[1:] + loop[:1]):
-                faces.append([a, b, ci])
-        m = trimesh.Trimesh(vertices=np.array(verts), faces=np.array(faces),
-                            process=False)
+                new_faces.append([a, b, ci])
+        if not new_faces:
+            break
+        m = trimesh.Trimesh(
+            vertices=np.vstack([m.vertices, np.array(new_verts)]),
+            faces=np.vstack([m.faces, np.array(new_faces, dtype=m.faces.dtype)]),
+            process=False)
     trimesh.repair.fix_normals(m)
     return m
 

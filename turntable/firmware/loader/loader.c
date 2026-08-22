@@ -49,7 +49,15 @@ void Reset_Handler(void)
         if (slot_valid(m, first)) jump_to(slot_base(first));
         /* The live slot is gone, but the previous one is still sitting there
          * untouched -- that is the entire point of keeping two. */
-        if (slot_valid(m, first ^ 1u)) jump_to(slot_base(first ^ 1u));
+        uint32_t other = first ^ 1u;
+        if (slot_valid(m, other)) jump_to(slot_base(other));
+        /* A board flashed over SWD and then updated once has a slot whose image
+         * predates any metadata, so its length was never recorded and the
+         * checksum above cannot pass. Refusing to run it would throw away a
+         * perfectly good fallback and send a working board to the bootloader. */
+        if (m->size[other] == 0u && looks_like_code(slot_base(other))) {
+            jump_to(slot_base(other));
+        }
     } else {
         /* Fresh board: programmed over SWD, never updated, no metadata written
          * yet. Run whatever is in slot A if it looks like an image at all. */

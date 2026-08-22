@@ -297,6 +297,12 @@ const RING_FULL = 150;   // photos that complete the orbit ring
 const RING_MIN  = 40;    // fewest photos that reliably reconstruct
 let view = {page:'list', name:null};
 let logOffset = 0, poller = null;
+// Module level for the same reason as the live timers: leaving the detail page
+// has to be able to kill the autotune poll. A closure-local timer kept polling
+// from a page nobody was on and then re-rendered the detail view over the top
+// of whatever the user had navigated to.
+let tuneTimer = null;
+function stopTune(){ clearInterval(tuneTimer); tuneTimer = null; }
 
 const api = async (path, opts={}) => {
   const r = await fetch('/api' + path, opts);
@@ -306,7 +312,10 @@ const api = async (path, opts={}) => {
 const jpost = (path, body) => api(path, {
   method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body||{})
 });
-const esc = s => String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+// Quotes included: filenames go straight into alt=""/title=""/data-view="",
+// and an uploaded photo can legally be named   x" onload="...
+const esc = s => String(s).replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const mb = n => n >= 1<<20 ? (n/(1<<20)).toFixed(1)+' MB' : Math.max(1,Math.round(n/1024))+' KB';
 const STATUS = {idle:'Chưa chạy', running:'Đang dựng', done:'Xong', failed:'Lỗi', stopped:'Đã dừng'};
 
@@ -563,7 +572,7 @@ async function renderDetail(name){
 
   const tuneBtn = document.getElementById('tune');
   const tuneLog = document.getElementById('tuneLog'), tuneOut = document.getElementById('tuneOut');
-  let tuneTimer = null;
+  stopTune();   // this render replaced the nodes the old poll was writing into
 
   const tuneReport = r => {
     if (!r) return '';
@@ -590,19 +599,25 @@ async function renderDetail(name){
       tuneLog.hidden = !r.log;
       if (r.log) { tuneLog.textContent = r.log; tuneLog.scrollTop = tuneLog.scrollHeight; }
       if (r.report) { tuneOut.innerHTML = tuneReport(r.report); tuneOut.hidden = false; }
+      if (r.running && tuneTimer === null) {
+        // A sweep survives a re-render and a reload; the button and the poll
+        // have to find their way back to it.
+        tuneBtn.disabled = true; tuneBtn.textContent = 'Đang quét…';
+        tuneTimer = setInterval(pollTune, 3000);
+      }
       if (!r.running) {
         // Only a run that was actually being watched has anything new to show.
         // Re-rendering on every poll made the first poll of every render redraw
         // the page, which started another poll -- an endless redraw loop that
         // reloaded the thumbnails out from under whoever was looking at them.
         const wasPolling = tuneTimer !== null;
-        clearInterval(tuneTimer); tuneTimer = null;
+        stopTune();
         if (wasPolling) {
           tuneBtn.disabled = false; tuneBtn.textContent = 'Quét lại';
           renderDetail(name);   // auto-best.stl is a new output row
         }
       }
-    } catch (e) { clearInterval(tuneTimer); tuneTimer = null; }
+    } catch (e) { stopTune(); }
   };
 
   if (tuneBtn) tuneBtn.onclick = async () => {
@@ -738,7 +753,11 @@ function pollLog(name, once){
   const tick = async () => {
     if (view.page !== 'detail' || view.name !== name) return clearInterval(poller);
     const box = el(); if (!box) return clearInterval(poller);
-    const r = await api(`/projects/${encodeURIComponent(name)}/log?offset=${logOffset}`);
+    let r;
+    // A blip (server restart, wifi drop) must not reject out of the tick and
+    // leave the interval firing into nothing; skip this round and try again.
+    try { r = await api(`/projects/${encodeURIComponent(name)}/log?offset=${logOffset}`); }
+    catch (e) { return; }
     if (logOffset === 0 && r.text) box.innerHTML = '';
     if (r.text){
       const stick = box.scrollTop + box.clientHeight >= box.scrollHeight - 30;
@@ -892,6 +911,7 @@ document.getElementById('dlgName').addEventListener('keydown', e => {
 function go(page, name){
   clearInterval(poller);
   stopLive();
+  stopTune();
   view = {page, name};
   location.hash = page === 'detail' ? '#/' + encodeURIComponent(name) : '';
   render();
@@ -903,6 +923,7 @@ function render(){
 window.addEventListener('hashchange', () => {
   clearInterval(poller);
   stopLive();
+  stopTune();
   const h = location.hash.replace(/^#\/?/, '');
   view = h ? {page:'detail', name:decodeURIComponent(h)} : {page:'list', name:null};
   render();

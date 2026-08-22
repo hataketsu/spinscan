@@ -16,8 +16,12 @@ void USART1_IRQHandler(void);
 
 static void default_handler(void)
 {
-    /* Nothing here can be reported anywhere, so stop rather than run on with a
-     * fault that would silently keep the motor energised. */
+    /* Cut the driver before halting. Stopping the CPU does not stop the motor:
+     * the enable line is a latched GPIO and would sit there holding torque, and
+     * a stalled coil is what cooks a stepper. GPIOB BSRR, pin 10, high half of
+     * the register = drive high = disabled on this board. Written directly
+     * because nothing else in this file may be assumed to still work. */
+    *(volatile uint32_t *)(0x40010C00u + 0x10u) = 1u << (10u + 16u);
     for (;;) {}
 }
 

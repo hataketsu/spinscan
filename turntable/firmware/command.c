@@ -59,17 +59,23 @@ static uint32_t tokenize(char *s, char *tok[], uint32_t max)
  * is rejected instead of quietly setting zero. */
 static int parse_int(const char *s, int32_t *out)
 {
-    int32_t v = 0;
+    uint32_t v = 0;
     int neg = 0;
     if (*s == '-') { neg = 1; s++; }
     else if (*s == '+') s++;
     if (!*s) return 0;
+    /* Accumulate unsigned and refuse anything that would not fit. Wrapping
+     * instead would let "SET shots 4294967298" arrive as a perfectly in-range
+     * 2, which is exactly the silent guess this parser exists to avoid. */
+    uint32_t limit = neg ? 2147483648u : 2147483647u;
     while (*s) {
         if (*s < '0' || *s > '9') return 0;
-        v = v * 10 + (*s - '0');
+        uint32_t d = (uint32_t)(*s - '0');
+        if (v > (limit - d) / 10u) return 0;
+        v = v * 10u + d;
         s++;
     }
-    *out = neg ? -v : v;
+    *out = neg ? (int32_t)(0u - v) : (int32_t)v;
     return 1;
 }
 
@@ -81,9 +87,12 @@ static int parse_u32(const char *s, uint32_t *out)
     if (!*s) return 0;
     while (*s) {
         if (*s < '0' || *s > '9') return 0;
-        uint32_t next = v * 10u + (uint32_t)(*s - '0');
-        if (next < v) return 0;              /* overflow */
-        v = next;
+        uint32_t d = (uint32_t)(*s - '0');
+        /* Check before multiplying: "5000000000" wraps to 705032704, which is
+         * larger than what it came from, so an after-the-fact compare misses
+         * it entirely. */
+        if (v > (0xFFFFFFFFu - d) / 10u) return 0;
+        v = v * 10u + d;
         s++;
     }
     *out = v;
@@ -332,6 +341,13 @@ void command_execute(char *line)
         int32_t hz = cfg.beep_hz, ms = cfg.beep_ms;
         if (n >= 2) parse_int(tok[1], &hz);
         if (n >= 3) parse_int(tok[2], &ms);
+        /* beep() busy-waits, so an unclamped duration freezes the whole board:
+         * the sequence stops being polled while the driver stays energised.
+         * Clamped to the same range the beephz/beepms settings allow. */
+        if (hz < 100) hz = 100;
+        if (hz > 10000) hz = 10000;
+        if (ms < 0) ms = 0;
+        if (ms > 2000) ms = 2000;
         beep((uint32_t)hz, (uint32_t)ms);
         ok();
         return;

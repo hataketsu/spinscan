@@ -82,14 +82,19 @@ void uart_putdec(int32_t v)
 {
     char tmp[12];
     uint32_t n = 0;
+    uint32_t u;
+    /* Via unsigned: -INT32_MIN does not fit in an int32_t, and the signed
+     * remainder of a negative value would print punctuation, not digits. */
     if (v < 0) {
         uart_putc('-');
-        v = -v;
+        u = 0u - (uint32_t)v;
+    } else {
+        u = (uint32_t)v;
     }
     do {
-        tmp[n++] = (char)('0' + (v % 10));
-        v /= 10;
-    } while (v && n < sizeof(tmp));
+        tmp[n++] = (char)('0' + (u % 10u));
+        u /= 10u;
+    } while (u && n < sizeof(tmp));
     while (n) uart_putc(tmp[--n]);
 }
 

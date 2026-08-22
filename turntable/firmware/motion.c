@@ -130,6 +130,9 @@ void beep(uint32_t hz, uint32_t ms)
 {
     if (!cfg.beep_on || !hz || !ms) return;
     uint32_t half_us = 500000u / hz;
+    /* Above 500 kHz the half period rounds to zero, and the cycle count below
+     * would then divide by it. Nothing audible lives up there anyway. */
+    if (!half_us) return;
     uint32_t cycles = (ms * 1000u) / (half_us * 2u);
     for (uint32_t i = 0; i < cycles; i++) {
         PIN_HIGH(BEEP_PORT, BEEP_PIN);
@@ -187,13 +190,17 @@ void motion_jog_steps(int32_t steps)
 {
     if (!steps) return;
     int reversed = 0;
-    if ((steps < 0) != (cfg.dir < 0)) {
+    /* The resting DIR level already encodes cfg.dir (motion_apply_dir), so the
+     * only thing that flips it here is the sign of the move. Testing cfg.dir
+     * again would cancel the setting out and leave it with no effect at all. */
+    if (steps < 0) {
         if (cfg.dir >= 0) PIN_LOW(DIR_PORT, DIR_PIN);
         else              PIN_HIGH(DIR_PORT, DIR_PIN);
         delay_us(10);
         reversed = 1;
     }
-    run_steps((uint32_t)(steps < 0 ? -steps : steps));
+    /* Negating INT32_MIN overflows; go through unsigned for the magnitude. */
+    run_steps(steps < 0 ? (uint32_t)(0u - (uint32_t)steps) : (uint32_t)steps);
     pos += steps;
     if (reversed) motion_apply_dir();
 }

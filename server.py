@@ -532,19 +532,32 @@ def tuner_alive(p: Path) -> int | None:
     would leave the UI spinning forever on a job that is already done. Reap what
     we can, and read the process state for the rest.
     """
+    f = p / ".tunepid"
     try:
-        pid = int((p / ".tunepid").read_text())
+        pid = int(f.read_text())
     except (OSError, ValueError):
         return None
+
+    def finished() -> None:
+        # Drop the stale pid file as well: it is now the only thing standing
+        # between a recycled pid and this project looking permanently busy --
+        # which would block run/delete, not just a second tune.
+        tuners.pop(pid, None)
+        f.unlink(missing_ok=True)
+
     proc = tuners.get(pid)
     if proc is not None and proc.poll() is not None:
-        tuners.pop(pid, None)
+        finished()
         return None
     try:
         state = (Path(f"/proc/{pid}/stat").read_text().rsplit(")", 1)[1].split()[0])
     except (OSError, IndexError):
+        finished()
         return None
-    return None if state == "Z" else pid
+    if state == "Z":
+        finished()
+        return None
+    return pid
 
 
 @app.post("/api/projects/{name}/autotune")
