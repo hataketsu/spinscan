@@ -744,12 +744,17 @@ async function renderDetail(name){
 
   startLive(name);
   logOffset = 0;
-  pollLog(name, true);
+  pollLog(name);
 }
 
-function pollLog(name, once){
+function pollLog(name){
   clearInterval(poller);
   const el = () => document.getElementById('log');
+  // Re-render when the run ENDS, and only then. Re-rendering whenever a poll
+  // comes back "not running" would fire on the first poll of a page whose
+  // pipeline finished long ago -- and that render starts another poll, which
+  // renders again: an endless redraw. Same guard as pollTune's wasPolling.
+  let sawRunning = false;
   const tick = async () => {
     if (view.page !== 'detail' || view.name !== name) return clearInterval(poller);
     const box = el(); if (!box) return clearInterval(poller);
@@ -767,7 +772,11 @@ function pollLog(name, once){
       logOffset = r.offset;
       if (stick) box.scrollTop = box.scrollHeight;
     }
-    if (r.status !== 'running'){ clearInterval(poller); if (!once) renderDetail(name); }
+    if (r.status === 'running') { sawRunning = true; return; }
+    clearInterval(poller);
+    // The run just ended under us: the status chip, the stage strip and the
+    // whole Kết quả section are all stale now.
+    if (sawRunning) renderDetail(name);
   };
   tick();
   poller = setInterval(tick, 2000);

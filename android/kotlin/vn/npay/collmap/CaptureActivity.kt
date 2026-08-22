@@ -1,11 +1,14 @@
 package vn.npay.collmap
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.ImageFormat
 import android.graphics.Matrix
 import android.graphics.Rect
+import android.graphics.RectF
 import android.graphics.SurfaceTexture
 import android.hardware.Sensor
 import android.hardware.SensorEvent
@@ -26,6 +29,8 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Looper
+import android.os.SystemClock
+import android.text.InputType
 import android.util.Range
 import android.util.Size
 import android.view.Gravity
@@ -42,6 +47,7 @@ import vn.npay.collmap.Ui.MATCH
 import vn.npay.collmap.Ui.WRAP
 import vn.npay.collmap.Ui.dp
 import java.io.ByteArrayOutputStream
+import java.util.Locale
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -62,6 +68,14 @@ import kotlin.math.sqrt
  *    turntable that has not settled does not put a smeared frame in the set.
  *  - Coverage. The tilt readout exists because a single elevation ring is the
  *    most common way a capture comes out unreconstructable from above or below.
+ *  - Framing. The elliptical mask is dialled in here, over the viewfinder,
+ *    because what it throws away is the room, and on a rig where only the table
+ *    moves the room is what turns into geometry sitting on top of the subject.
+ *    The reasoning behind the shape lives in Mask.kt.
+ *
+ * A run is a whole session and not a toggle to babysit: the two numbers the
+ * user sets -- how many photos and how long between them -- decide the step
+ * angle and the length of the run, and the sequence stops by itself at the end.
  *
  * With a board on the OTG port the run is closed-loop: shutter, STEP, wait for
  * the board's "ok", shutter again. Handheld it falls back to the free-running
@@ -74,6 +88,8 @@ class CaptureActivity : Activity() {
     private var server = ""
     private var project = ""
     private var intervalMs = 4_000L
+    private var shots = DEFAULT_SHOTS     // photos per run, and the board's nấc count
+    private var preset = DEFAULT_PRESET   // index into PRESETS, or -1 once touched by hand
     private var capResolution = true      // cap at ~12 MP unless the user opts out
     private var ratio = DEFAULT_RATIO     // aspect the still stream is pinned to
     private var ratioOptions = listOf(DEFAULT_RATIO)
@@ -110,10 +126,13 @@ class CaptureActivity : Activity() {
     private var autoRunning = false
     private var locked = false
     private var awaitingLock = false
+    private var frameIndex = 0            // frames landed in this run
+    private var requested = 0             // shutters fired in this run
+    private var runStart = 0L             // elapsedRealtime when the run began
+    private var runFailedAt = 0           // upload failures already on the counter
+    private var runId = 0                 // so a stale guard cannot end the next run
 
     // ---- turntable sequence ------------------------------------------------
-    private var boardShots = 0            // indexes per revolution, from the board
-    private var boardIndex = 0            // frames done in this run
     private var boardRunning = false
     private var awaitingStep = false      // STEP sent, board has not said "ok"
     private var awaitingFrame = false     // shutter fired, JPEG not queued yet
@@ -134,13 +153,23 @@ class CaptureActivity : Activity() {
     private var jitter = 0f
     private var pitchDeg = 0f
 
+    // ---- mask ---------------------------------------------------------------
+    private var mask = MaskGeom.DEFAULT
+    private var maskMode = Mask.MODE_OFF
+    private var maskEditing = false
+    private val maskWarned = AtomicBoolean(false)
+
     // ---- views ------------------------------------------------------------
     private lateinit var counterView: TextView
+    private lateinit var planView: TextView
+    private lateinit var timeView: TextView
     private lateinit var stateView: TextView
     private lateinit var tiltView: TextView
     private lateinit var lockButton: android.widget.Button
     private lateinit var autoButton: android.widget.Button
     private lateinit var intervalButton: android.widget.Button
+    private lateinit var shotsButton: android.widget.Button
+    private lateinit var presetButton: android.widget.Button
     private lateinit var tierButton: android.widget.Button
     private lateinit var resButton: android.widget.Button
     private lateinit var ratioButton: android.widget.Button
@@ -148,6 +177,14 @@ class CaptureActivity : Activity() {
     private lateinit var focusBar: SeekBar
     private lateinit var focusView: TextView
     private lateinit var focusRow: View
+    private lateinit var maskButton: android.widget.Button
+    private lateinit var maskEditButton: android.widget.Button
+    private lateinit var maskResetButton: android.widget.Button
+    private lateinit var maskOverlay: MaskOverlay
+    private lateinit var maskBars: View
+    private lateinit var maskSizeBar: SeekBar
+    private lateinit var maskSquashBar: SeekBar
+    private lateinit var maskRotBar: SeekBar
     private lateinit var zoomView: TextView
     private lateinit var topStrip: View
     private lateinit var bottomStrip: View
@@ -160,13 +197,19 @@ class CaptureActivity : Activity() {
          * period only makes sense if it matches the table's step period, and
          * making the user type it twice is how the two drift apart. */
         val prefs = getSharedPreferences(PREFS, MODE_PRIVATE)
+        preset = prefs.getInt(KEY_PRESET, DEFAULT_PRESET).coerceIn(-1, PRESETS.size - 1)
+        val base = PRESETS.getOrNull(preset) ?: PRESETS[DEFAULT_PRESET]
+        /* Whatever was last set, falling back to the preset's own numbers so a
+         * first run is already a sane one. */
+        shots = prefs.getInt(TurntableActivity.KEY_SHOTS, 0).takeIf { it in MIN_SHOTS..MAX_SHOTS }
+            ?: base.shots
         val saved = prefs.getInt(TurntableActivity.KEY_INTERVAL, 0).toLong()
-        if (saved in 1_000..30_000) intervalMs = saved
-        /* A starting value so a run can begin before the board answers "?";
-         * the board's own reply overwrites it as soon as it lands. */
-        boardShots = prefs.getInt(TurntableActivity.KEY_SHOTS, 0)
+        intervalMs = if (saved in 1_000..120_000) saved else base.intervalMs
+        capResolution = prefs.getBoolean(KEY_CAP, base.cap)
         ratio = prefs.getString(KEY_RATIO, DEFAULT_RATIO) ?: DEFAULT_RATIO
         zoom = prefs.getFloat(KEY_ZOOM, 1f)
+        mask = Mask.load(prefs)
+        maskMode = Mask.mode(prefs)
         buildUi()
         sensors = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         accel = sensors?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
@@ -179,6 +222,14 @@ class CaptureActivity : Activity() {
         val root = FrameLayout(ctx).apply { setBackgroundColor(Ui.GROUND) }
         textureView = TextureView(ctx)
         root.addView(textureView, FrameLayout.LayoutParams(MATCH, MATCH))
+        // Above the picture, under the control strips: it is a framing aid, not
+        // a control surface, and it only takes touches while it is being edited.
+        maskOverlay = MaskOverlay(ctx).apply {
+            geom = mask
+            showing = maskMode != Mask.MODE_OFF
+            onCommit = { g -> mask = g; Mask.save(prefs(), g) }
+        }
+        root.addView(maskOverlay, FrameLayout.LayoutParams(MATCH, MATCH))
 
         // top strip
         val top = Ui.row(ctx).apply {
@@ -186,10 +237,13 @@ class CaptureActivity : Activity() {
             background = Ui.box(ctx, 0xAA0B0F14.toInt(), 0, 0f)
         }
         counterView = Ui.mono(ctx, "0 ảnh", 15f, Ui.AMBER)
+        planView = Ui.text(ctx, "", 12f, Ui.DIM)
         stateView = Ui.text(ctx, project, 13f, Ui.DIM)
+        timeView = Ui.mono(ctx, "", 12f, Ui.AMBER).apply { visibility = View.GONE }
         renderState()
+        renderPlan()
         val titleCol = Ui.column(ctx).apply {
-            addView(counterView); addView(stateView)
+            addView(counterView); addView(planView); addView(stateView); addView(timeView)
         }
         top.addView(titleCol, Ui.lp(0, WRAP, 1f))
         zoomView = Ui.mono(ctx, "1.0x", 13f, Ui.DIM)
@@ -199,6 +253,9 @@ class CaptureActivity : Activity() {
         top.addView(tiltView)
         root.addView(top, FrameLayout.LayoutParams(MATCH, WRAP, Gravity.TOP))
         topStrip = top
+        top.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+            configureTransform(textureView.width, textureView.height)
+        }
 
         // bottom strip: three rows. Seven controls across a portrait phone would
         // squeeze every label to an ellipsis, and the two framing controls are
@@ -210,10 +267,15 @@ class CaptureActivity : Activity() {
         lockButton = Ui.button(ctx, "Khoá AE/AF")
         autoButton = Ui.button(ctx, autoLabel(), Ui.AMBER)
         intervalButton = Ui.button(ctx, "${intervalMs / 1000}s")
+        shotsButton = Ui.button(ctx, "$shots ảnh")
+        presetButton = Ui.button(ctx, presetLabel())
         tierButton = Ui.button(ctx, "Ngang")
         resButton = Ui.button(ctx, if (capResolution) "12MP" else "Max")
         ratioButton = Ui.button(ctx, ratio)
         focusButton = Ui.button(ctx, "Nét: Tự động")
+        maskButton = Ui.button(ctx, maskLabel())
+        maskEditButton = Ui.button(ctx, "Sửa vòng")
+        maskResetButton = Ui.button(ctx, "Mặc định")
         val shutter = Ui.button(ctx, "Chụp", Ui.BLUE)
 
         fun fill(row: LinearLayout, items: List<Pair<View, Float>>) {
@@ -223,10 +285,11 @@ class CaptureActivity : Activity() {
             }
         }
         val settingsRow = Ui.row(ctx)
-        fill(settingsRow, listOf(lockButton to 1.5f, intervalButton to 0.7f,
-            tierButton to 0.9f))
+        fill(settingsRow, listOf(lockButton to 1.3f, focusButton to 1.3f, tierButton to 0.8f))
+        val runRow = Ui.row(ctx)
+        fill(runRow, listOf(presetButton to 1f, shotsButton to 1f, intervalButton to 0.7f))
         val frameRow = Ui.row(ctx)
-        fill(frameRow, listOf(ratioButton to 0.8f, resButton to 0.8f, focusButton to 1.3f))
+        fill(frameRow, listOf(ratioButton to 0.8f, resButton to 0.8f, maskEditButton to 1.1f))
         // Only shown in manual focus; a slider with nothing behind it is a trap.
         val focusLine = Ui.row(ctx)
         focusBar = SeekBar(ctx).apply { max = FOCUS_STEPS }
@@ -236,11 +299,30 @@ class CaptureActivity : Activity() {
         focusLine.addView(focusView, Ui.lp(WRAP, WRAP))
         focusLine.visibility = View.GONE
         focusRow = focusLine
+        // Sliders and not a pinch: pinch is already zoom, and a second meaning
+        // for it would cost the one that is there.
+        fun slider(name: String, bar: SeekBar): View = Ui.row(ctx).apply {
+            addView(Ui.text(ctx, name, 12f, Ui.DIM).apply { width = dp(58f) })
+            addView(bar, Ui.lp(0, WRAP, 1f))
+        }
+        maskSizeBar = SeekBar(ctx).apply { max = MASK_STEPS }
+        maskSquashBar = SeekBar(ctx).apply { max = MASK_STEPS }
+        maskRotBar = SeekBar(ctx).apply { max = MASK_STEPS }
+        maskBars = Ui.column(ctx).apply {
+            addView(slider("Cỡ", maskSizeBar), Ui.lp(MATCH, WRAP))
+            addView(slider("Dẹt", maskSquashBar), Ui.lp(MATCH, WRAP))
+            addView(slider("Nghiêng", maskRotBar), Ui.lp(MATCH, WRAP))
+            addView(maskResetButton, Ui.lp(MATCH, WRAP, 0f, 4, ctx))
+            visibility = View.GONE
+        }
         val shutterRow = Ui.row(ctx)
         fill(shutterRow, listOf(shutter to 1f, autoButton to 1.4f))
         bottom.addView(settingsRow, Ui.lp(MATCH, WRAP))
+        bottom.addView(runRow, Ui.lp(MATCH, WRAP, 0f, 8, ctx))
         bottom.addView(frameRow, Ui.lp(MATCH, WRAP, 0f, 8, ctx))
+        bottom.addView(maskButton, Ui.lp(MATCH, WRAP, 0f, 8, ctx))
         bottom.addView(focusRow, Ui.lp(MATCH, WRAP, 0f, 4, ctx))
+        bottom.addView(maskBars, Ui.lp(MATCH, WRAP, 0f, 4, ctx))
         bottom.addView(shutterRow, Ui.lp(MATCH, WRAP, 0f, 8, ctx))
         root.addView(bottom, FrameLayout.LayoutParams(MATCH, WRAP, Gravity.BOTTOM))
         bottomStrip = bottom
@@ -255,6 +337,34 @@ class CaptureActivity : Activity() {
         shutter.setOnClickListener { requestCapture(manual = true) }
         autoButton.setOnClickListener { if (autoRunning) stopAuto() else startAuto() }
         intervalButton.setOnClickListener { cycleInterval() }
+        intervalButton.setOnLongClickListener {
+            if (!runFrozen()) askNumber("Giây giữa hai ảnh", (intervalMs / 1000).toInt()) {
+                intervalMs = it.coerceIn(1, 120) * 1000L
+                onRunSettingChanged()
+            }
+            true
+        }
+        shotsButton.setOnClickListener { cycleShots() }
+        shotsButton.setOnLongClickListener {
+            if (!runFrozen()) askNumber("Số ảnh mỗi vòng", shots) {
+                shots = it.coerceIn(MIN_SHOTS, MAX_SHOTS)
+                onRunSettingChanged()
+            }
+            true
+        }
+        presetButton.setOnClickListener { cyclePreset() }
+        maskButton.setOnClickListener { cycleMaskMode() }
+        maskEditButton.setOnClickListener { setMaskEditing(!maskEditing) }
+        maskResetButton.setOnClickListener {
+            if (maskFrozen()) return@setOnClickListener
+            maskOverlay.reset()
+            mask = maskOverlay.geom
+            Mask.save(prefs(), mask)
+            syncMaskBars()
+        }
+        maskBar(maskSizeBar) { f -> maskOverlay.setSize(Mask.MIN_R + f * (Mask.MAX_R - Mask.MIN_R)) }
+        maskBar(maskSquashBar) { f -> maskOverlay.setSquash(SQUASH_MIN + f * (SQUASH_MAX - SQUASH_MIN)) }
+        maskBar(maskRotBar) { f -> maskOverlay.setRot((f * 2f - 1f) * Mask.ROT_MAX) }
         tierButton.setOnClickListener { cycleTier() }
         resButton.setOnClickListener { toggleResolution() }
         ratioButton.setOnClickListener { cycleRatio() }
@@ -270,6 +380,23 @@ class CaptureActivity : Activity() {
             override fun onStopTrackingTouch(bar: SeekBar) = Unit
         })
         textureView.setOnTouchListener { _, e -> zoomDetector.onTouchEvent(e); true }
+        syncMaskUi()
+    }
+
+    private fun prefs() = getSharedPreferences(PREFS, MODE_PRIVATE)
+
+    /** Every mask slider behaves the same: live while dragged, saved on release. */
+    private fun maskBar(bar: SeekBar, apply: (Float) -> Unit) {
+        bar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(b: SeekBar, p: Int, fromUser: Boolean) {
+                if (!fromUser) return
+                if (maskFrozen()) { syncMaskBars(); return }
+                apply(p.toFloat() / MASK_STEPS)
+                mask = maskOverlay.geom
+            }
+            override fun onStartTrackingTouch(b: SeekBar) = Unit
+            override fun onStopTrackingTouch(b: SeekBar) = Mask.save(prefs(), mask)
+        })
     }
 
     // ----------------------------------------------------------------- zoom
