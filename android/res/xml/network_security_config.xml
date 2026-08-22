@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The rig is a machine on the LAN speaking plain HTTP. Android 9+ blocks
+     cleartext by default, so it is allowed here and nowhere else. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true"/>
+</network-security-config>

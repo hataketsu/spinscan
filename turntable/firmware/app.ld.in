@@ -1,0 +1,32 @@
+/* Application slot. Generated per slot by the Makefile: the two copies are the
+ * same code linked at different addresses, because Cortex-M vector tables and
+ * literal pools are absolute and an image cannot be moved after the fact. */
+MEMORY
+{
+  FLASH (rx)  : ORIGIN = @SLOT_BASE@, LENGTH = @SLOT_SIZE@
+  RAM   (rwx) : ORIGIN = 0x20000000, LENGTH = 48K
+}
+
+_estack = ORIGIN(RAM) + LENGTH(RAM);
+_vector_base = ORIGIN(FLASH);
+
+ENTRY(Reset_Handler)
+
+SECTIONS
+{
+  .isr_vector : { KEEP(*(.isr_vector)) } > FLASH
+
+  .text : { *(.text*) *(.rodata*) . = ALIGN(4); } > FLASH
+
+  _sidata = LOADADDR(.data);
+  .data : { . = ALIGN(4); _sdata = .; *(.data*) . = ALIGN(4); _edata = .; } > RAM AT > FLASH
+
+  /* Flash cannot be erased by code fetching from flash, so the routine that
+     does the erasing is linked into RAM and copied there at reset. */
+  _siramfunc = LOADADDR(.ramfunc);
+  .ramfunc : { . = ALIGN(4); _sramfunc = .; *(.ramfunc*) . = ALIGN(4); _eramfunc = .; } > RAM AT > FLASH
+
+  .bss : { . = ALIGN(4); _sbss = .; *(.bss*) *(COMMON) . = ALIGN(4); _ebss = .; } > RAM
+
+  /DISCARD/ : { *(.ARM.exidx*) *(.note*) *(.comment) }
+}

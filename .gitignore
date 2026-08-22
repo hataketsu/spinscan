@@ -1,0 +1,25 @@
+# Secrets. The LLM gateway key lives here and must never be committed.
+.env
+
+# Python environment
+.venv/
+__pycache__/
+*.pyc
+
+# Captures and reconstructions: gigabytes of the user's own photos.
+projects/
+workspace/
+images/
+
+# Build outputs. The APK and the firmware images belong in a GitHub release,
+# not in the tree.
+dist/
+android/build/
+turntable/firmware/*.o
+turntable/firmware/*.elf
+turntable/firmware/*.bin
+turntable/firmware/*.map
+turntable/firmware/slot-*.ld
+
+# The standalone Kotlin compiler, downloaded by hand -- 91 MB of toolchain.
+android/tools/
