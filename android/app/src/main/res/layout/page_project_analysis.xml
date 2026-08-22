@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingStart="@dimen/screen_margin"
+    android:paddingTop="12dp"
+    android:paddingEnd="@dimen/screen_margin"
+    android:paddingBottom="24dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/analyze"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/analyze"/>
+
+        <com.google.android.material.progressindicator.LinearProgressIndicator
+            android:id="@+id/analyze_progress"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:indeterminate="true"
+            android:visibility="gone"/>
+
+        <LinearLayout
+            android:id="@+id/analysis_box"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="vertical"/>
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

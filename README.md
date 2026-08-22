@@ -215,16 +215,26 @@ phải trả giá đó — bảng kết quả ghi rõ số lỗ bị lấp.
 
 ## App Android
 
-Nguồn ở `android/`, Kotlin, **không dùng Gradle**. Build tay đúng chuỗi mà Gradle
-vẫn chạy: `aapt2` -> `kotlinc` -> `d8` -> `zipalign` -> `apksigner`. Không tải gì
-lúc build: chỉ cần Android SDK và `kotlinc` đứng sẵn trong `android/tools/`.
+Nguồn ở `android/`, Kotlin + Gradle, giao diện Material 3 (AndroidX). Một
+Activity duy nhất với **thanh điều hướng dưới**: Chụp / Project / Bàn xoay.
 
 ```bash
-./android/build.sh --version-code 3 --version-name 1.2
+cd android
+./gradlew assembleDebug              # ra app/build/outputs/apk/debug/app-debug.apk
+./gradlew clean publishOta           # bản phát hành: chép sang dist/ + ghi latest.json
 ```
 
-Ra `dist/collmap.apk` + `dist/latest.json`. Máy chủ phục vụ hai file đó ở
-`/api/app/download` và `/api/app/latest`.
+`clean` là cố ý: build tăng dần đôi khi giữ lại bộ ngôn ngữ cũ của
+Material/AppCompat và APK phình thêm ~600 KB. Bản đi OTA thì build sạch.
+
+Phiên bản nằm trong `android/app/build.gradle.kts` (`versionCode`/`versionName`),
+không nằm trong manifest. `publishOta` ghi `dist/collmap.apk` +
+`dist/latest.json`; máy chủ phục vụ hai file đó ở `/api/app/download` và
+`/api/app/latest`.
+
+Bản build ký bằng `~/.android/debug.keystore` — **không đổi khoá**: Android từ
+chối cập nhật đè lên bản đã cài nếu chữ ký khác, và mọi máy đang dùng sẽ phải gỡ
+cài đặt bằng tay.
 
 Trong app:
 

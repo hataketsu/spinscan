@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The app theme. Every colour, corner and typeface a view uses is resolved from
+  here: the point of the migration was to stop each screen inventing its own
+  look in Kotlin, so nothing below this file should be setting a hex value.
+
+  Dark only, on purpose. The rig lives next to a turntable under controlled
+  light and a light scheme would put a white rectangle behind a viewfinder.
+-->
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <style name="Theme.Collmap" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="colorPrimary">@color/collmap_primary</item>
+        <item name="colorOnPrimary">@color/collmap_on_primary</item>
+        <item name="colorPrimaryContainer">@color/collmap_primary_container</item>
+        <item name="colorOnPrimaryContainer">@color/collmap_on_primary_container</item>
+
+        <item name="colorSecondary">@color/collmap_secondary</item>
+        <item name="colorOnSecondary">@color/collmap_on_secondary</item>
+        <item name="colorSecondaryContainer">@color/collmap_secondary_container</item>
+        <item name="colorOnSecondaryContainer">@color/collmap_on_secondary_container</item>
+
+        <item name="colorTertiary">@color/collmap_tertiary</item>
+        <item name="colorOnTertiary">@color/collmap_on_tertiary</item>
+        <item name="colorTertiaryContainer">@color/collmap_tertiary_container</item>
+        <item name="colorOnTertiaryContainer">@color/collmap_on_tertiary_container</item>
+
+        <item name="colorError">@color/collmap_error</item>
+        <item name="colorOnError">@color/collmap_on_error</item>
+        <item name="colorErrorContainer">@color/collmap_error_container</item>
+        <item name="colorOnErrorContainer">@color/collmap_on_error_container</item>
+
+        <item name="android:colorBackground">@color/collmap_surface</item>
+        <item name="colorOnBackground">@color/collmap_on_surface</item>
+        <item name="colorSurface">@color/collmap_surface</item>
+        <item name="colorOnSurface">@color/collmap_on_surface</item>
+        <item name="colorSurfaceVariant">@color/collmap_surface_variant</item>
+        <item name="colorOnSurfaceVariant">@color/collmap_on_surface_variant</item>
+        <item name="colorSurfaceInverse">@color/collmap_on_surface</item>
+        <item name="colorOnSurfaceInverse">@color/collmap_surface</item>
+
+        <item name="colorSurfaceContainerLowest">@color/collmap_surface_container_lowest</item>
+        <item name="colorSurfaceContainerLow">@color/collmap_surface_container_low</item>
+        <item name="colorSurfaceContainer">@color/collmap_surface_container</item>
+        <item name="colorSurfaceContainerHigh">@color/collmap_surface_container_high</item>
+        <item name="colorSurfaceContainerHighest">@color/collmap_surface_container_highest</item>
+        <item name="colorSurfaceBright">@color/collmap_surface_container_highest</item>
+        <item name="colorSurfaceDim">@color/collmap_surface</item>
+
+        <item name="colorOutline">@color/collmap_outline</item>
+        <item name="colorOutlineVariant">@color/collmap_outline_variant</item>
+        <item name="android:colorControlHighlight">#22FFB449</item>
+
+        <!-- Tonal elevation, not drop shadows: a raised surface is a lighter
+             container. Real shadows are left to the things that genuinely
+             float - a scrolled app bar, a dialog - and are set there. -->
+        <item name="elevationOverlayEnabled">true</item>
+
+        <item name="android:statusBarColor">@color/collmap_surface</item>
+        <item name="android:navigationBarColor">@color/collmap_surface_container</item>
+        <item name="android:windowLightStatusBar">false</item>
+
+        <!-- Shape scale, identical to the web's. -->
+        <item name="shapeAppearanceCornerExtraSmall">@style/ShapeAppearance.Collmap.ExtraSmall</item>
+        <item name="shapeAppearanceCornerSmall">@style/ShapeAppearance.Collmap.Small</item>
+        <item name="shapeAppearanceCornerMedium">@style/ShapeAppearance.Collmap.Medium</item>
+        <item name="shapeAppearanceCornerLarge">@style/ShapeAppearance.Collmap.Large</item>
+        <item name="shapeAppearanceCornerExtraLarge">@style/ShapeAppearance.Collmap.ExtraLarge</item>
+
+        <item name="textAppearanceDisplayLarge">@style/TextAppearance.Collmap.DisplayLarge</item>
+        <item name="textAppearanceDisplayMedium">@style/TextAppearance.Collmap.DisplayMedium</item>
+        <item name="textAppearanceDisplaySmall">@style/TextAppearance.Collmap.DisplaySmall</item>
+        <item name="textAppearanceHeadlineLarge">@style/TextAppearance.Collmap.HeadlineLarge</item>
+        <item name="textAppearanceHeadlineMedium">@style/TextAppearance.Collmap.HeadlineMedium</item>
+        <item name="textAppearanceHeadlineSmall">@style/TextAppearance.Collmap.HeadlineSmall</item>
+        <item name="textAppearanceTitleLarge">@style/TextAppearance.Collmap.TitleLarge</item>
+        <item name="textAppearanceTitleMedium">@style/TextAppearance.Collmap.TitleMedium</item>
+        <item name="textAppearanceTitleSmall">@style/TextAppearance.Collmap.TitleSmall</item>
+        <item name="textAppearanceBodyLarge">@style/TextAppearance.Collmap.BodyLarge</item>
+        <item name="textAppearanceBodyMedium">@style/TextAppearance.Collmap.BodyMedium</item>
+        <item name="textAppearanceBodySmall">@style/TextAppearance.Collmap.BodySmall</item>
+        <item name="textAppearanceLabelLarge">@style/TextAppearance.Collmap.LabelLarge</item>
+        <item name="textAppearanceLabelMedium">@style/TextAppearance.Collmap.LabelMedium</item>
+        <item name="textAppearanceLabelSmall">@style/TextAppearance.Collmap.LabelSmall</item>
+        <item name="android:fontFamily">@font/be_vietnam_pro</item>
+        <item name="fontFamily">@font/be_vietnam_pro</item>
+
+        <item name="bottomNavigationStyle">@style/Widget.Collmap.BottomNavigation</item>
+        <item name="tabStyle">@style/Widget.Collmap.TabLayout</item>
+        <item name="sliderStyle">@style/Widget.Collmap.Slider</item>
+        <item name="materialCardViewStyle">@style/Widget.Collmap.Card</item>
+        <item name="toolbarStyle">@style/Widget.Collmap.Toolbar</item>
+        <item name="snackbarStyle">@style/Widget.Collmap.Snackbar</item>
+        <item name="snackbarTextViewStyle">@style/Widget.Collmap.Snackbar.TextView</item>
+        <item name="textInputStyle">@style/Widget.Collmap.TextInputLayout</item>
+    </style>
+
+    <style name="ShapeAppearance.Collmap.ExtraSmall" parent="ShapeAppearance.Material3.Corner.ExtraSmall">
+        <item name="cornerSize">4dp</item>
+    </style>
+    <style name="ShapeAppearance.Collmap.Small" parent="ShapeAppearance.Material3.Corner.Small">
+        <item name="cornerSize">8dp</item>
+    </style>
+    <style name="ShapeAppearance.Collmap.Medium" parent="ShapeAppearance.Material3.Corner.Medium">
+        <item name="cornerSize">12dp</item>
+    </style>
+    <style name="ShapeAppearance.Collmap.Large" parent="ShapeAppearance.Material3.Corner.Large">
+        <item name="cornerSize">16dp</item>
+    </style>
+    <style name="ShapeAppearance.Collmap.ExtraLarge" parent="ShapeAppearance.Material3.Corner.ExtraLarge">
+        <item name="cornerSize">28dp</item>
+    </style>
+
+    <!-- The three destinations. The pill behind the selected item is amber,
+         because amber is the identity; the secondary role stays blue. -->
+    <style name="Widget.Collmap.BottomNavigation" parent="Widget.Material3.BottomNavigationView">
+        <item name="android:background">?attr/colorSurfaceContainer</item>
+        <item name="itemActiveIndicatorStyle">@style/Widget.Collmap.BottomNavigation.Indicator</item>
+        <item name="itemIconTint">@color/nav_item</item>
+        <item name="itemTextColor">@color/nav_item</item>
+        <item name="elevation">0dp</item>
+        <item name="labelVisibilityMode">labeled</item>
+    </style>
+    <style name="Widget.Collmap.BottomNavigation.Indicator"
+        parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
+        <item name="android:color">?attr/colorPrimaryContainer</item>
+    </style>
+
+    <style name="Widget.Collmap.TabLayout" parent="Widget.Material3.TabLayout">
+        <item name="android:background">@android:color/transparent</item>
+        <item name="tabIndicatorColor">?attr/colorPrimary</item>
+        <item name="tabIndicatorFullWidth">false</item>
+        <item name="tabSelectedTextColor">?attr/colorPrimary</item>
+        <item name="tabTextColor">?attr/colorOnSurfaceVariant</item>
+        <item name="tabIconTint">@color/nav_item</item>
+        <item name="tabRippleColor">?attr/colorControlHighlight</item>
+    </style>
+
+    <style name="Widget.Collmap.Slider" parent="Widget.Material3.Slider">
+        <item name="trackColorActive">?attr/colorPrimary</item>
+        <item name="trackColorInactive">?attr/colorSurfaceContainerHighest</item>
+        <item name="thumbColor">?attr/colorPrimary</item>
+        <item name="haloColor">#33FFB449</item>
+        <item name="labelBehavior">gone</item>
+        <item name="android:minHeight">@dimen/slider_track_height</item>
+    </style>
+
+    <!-- Elevated by tone, outlined by hairline. No shadow: a card is not
+         floating, it is a lighter patch of the same surface. -->
+    <style name="Widget.Collmap.Card" parent="Widget.Material3.CardView.Filled">
+        <item name="cardBackgroundColor">?attr/colorSurfaceContainerLow</item>
+        <item name="cardElevation">0dp</item>
+        <item name="strokeColor">?attr/colorOutlineVariant</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="shapeAppearance">@style/ShapeAppearance.Collmap.Large</item>
+    </style>
+
+    <style name="Widget.Collmap.Toolbar" parent="Widget.Material3.Toolbar">
+        <item name="android:background">@android:color/transparent</item>
+        <item name="titleTextAppearance">@style/TextAppearance.Collmap.TitleLarge</item>
+        <item name="subtitleTextAppearance">@style/TextAppearance.Collmap.BodySmall</item>
+        <item name="titleTextColor">?attr/colorOnSurface</item>
+        <item name="subtitleTextColor">?attr/colorOnSurfaceVariant</item>
+    </style>
+
+    <style name="Widget.Collmap.Snackbar" parent="Widget.Material3.Snackbar">
+        <item name="backgroundTint">?attr/colorSurfaceContainerHighest</item>
+    </style>
+    <style name="Widget.Collmap.Snackbar.TextView" parent="Widget.Material3.Snackbar.TextView">
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+
+    <style name="Widget.Collmap.TextInputLayout"
+        parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="boxCornerRadiusTopStart">12dp</item>
+        <item name="boxCornerRadiusTopEnd">12dp</item>
+        <item name="boxCornerRadiusBottomStart">12dp</item>
+        <item name="boxCornerRadiusBottomEnd">12dp</item>
+    </style>
+
+    <!-- A segmented control: outlined, with the selected segment filled amber.
+         Used for every MaterialButtonToggleGroup in the app. -->
+    <style name="Widget.Collmap.Button.Toggle" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="backgroundTint">@color/toggle_background</item>
+        <item name="android:textColor">@color/toggle_text</item>
+        <item name="iconTint">@color/toggle_text</item>
+    </style>
+
+    <!-- A section heading in the sense the old Ui.label() meant: small, dim,
+         tracked out, sitting above the thing it names. -->
+    <style name="TextAppearance.Collmap.SectionLabel" parent="TextAppearance.Collmap.LabelSmall">
+        <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:letterSpacing">0.08</item>
+    </style>
+    <style name="Widget.Collmap.SectionLabel" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textAppearance">@style/TextAppearance.Collmap.SectionLabel</item>
+        <item name="android:paddingTop">20dp</item>
+        <item name="android:paddingBottom">6dp</item>
+    </style>
+</resources>

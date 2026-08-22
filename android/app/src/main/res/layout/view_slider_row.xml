@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  One slider, one row, and the row is the unit of spacing.
+
+  The label line carries the name and the current value, so the value is read
+  rather than guessed from where the thumb sits. It lives above the track and
+  never inside it: the track keeps a full 48dp of its own, which is Material's
+  minimum touch target and the smallest thing a thumb can reliably land on.
+  The padding either side adds up to the 16dp of clear air between rows.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingTop="8dp"
+    android:paddingBottom="8dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingStart="4dp"
+        android:paddingEnd="4dp">
+
+        <TextView
+            android:id="@+id/slider_label"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textAppearance="?attr/textAppearanceLabelLarge"
+            android:textColor="?attr/colorOnSurfaceVariant"/>
+
+        <TextView
+            android:id="@+id/slider_value"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="@style/TextAppearance.Collmap.Mono.Label"
+            android:textColor="?attr/colorPrimary"/>
+    </LinearLayout>
+
+    <com.google.android.material.slider.Slider
+        android:id="@+id/slider"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/slider_track_height"
+        app:labelBehavior="gone"/>
+</LinearLayout>

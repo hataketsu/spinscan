@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The selected option in a toggle group is amber, the same amber as the
+     bottom bar's pill. Amber is the identity; the blue secondary role that
+     Material would reach for here belongs to actions, not to selection. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="?attr/colorPrimaryContainer" android:state_checked="true"/>
+    <item android:color="@android:color/transparent"/>
+</selector>

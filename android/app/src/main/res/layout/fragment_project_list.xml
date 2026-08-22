@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/colorSurface"
+    android:orientation="vertical">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:elevation="0dp"
+        android:background="@android:color/transparent">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            app:subtitle="@string/app_tagline"
+            app:title="@string/app_name"/>
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:paddingStart="@dimen/screen_margin"
+        android:paddingEnd="@dimen/screen_margin"
+        android:paddingBottom="24dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                style="@style/Widget.Collmap.SectionLabel"
+                android:paddingTop="4dp"
+                android:text="@string/server"/>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/server_layout"
+                style="?attr/textInputStyle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/server"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textUri"
+                    android:singleLine="true"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:orientation="horizontal">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/connect"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/connect"
+                    app:icon="@drawable/ic_refresh"/>
+
+                <Space
+                    android:layout_width="10dp"
+                    android:layout_height="1dp"/>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/create"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/create_project"
+                    app:icon="@drawable/ic_add"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/status_row"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <com.google.android.material.progressindicator.CircularProgressIndicator
+                    android:id="@+id/busy"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="10dp"
+                    android:indeterminate="true"
+                    android:visibility="gone"
+                    app:indicatorSize="18dp"
+                    app:trackThickness="2dp"/>
+
+                <TextView
+                    android:id="@+id/status"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/not_connected"
+                    android:textAppearance="?attr/textAppearanceBodyMedium"
+                    android:textColor="?attr/colorOnSurfaceVariant"/>
+            </LinearLayout>
+
+            <TextView
+                style="@style/Widget.Collmap.SectionLabel"
+                android:text="@string/section_project"/>
+
+            <LinearLayout
+                android:id="@+id/project_list"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"/>
+
+            <TextView
+                style="@style/Widget.Collmap.SectionLabel"
+                android:text="@string/section_app"/>
+
+            <TextView
+                android:id="@+id/app_version"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="@style/TextAppearance.Collmap.Mono.Small"
+                android:textColor="?attr/colorOnSurfaceVariant"/>
+
+            <com.google.android.material.progressindicator.LinearProgressIndicator
+                android:id="@+id/update_progress"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:visibility="gone"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/check_update"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="@string/check_update"
+                app:icon="@drawable/ic_download"/>
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+</LinearLayout>

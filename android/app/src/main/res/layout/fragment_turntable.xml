@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/colorSurface"
+    android:orientation="vertical">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@android:color/transparent"
+        app:elevation="0dp">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            app:title="@string/turntable_title"/>
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:paddingStart="@dimen/screen_margin"
+        android:paddingEnd="@dimen/screen_margin"
+        android:paddingBottom="24dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/state_line"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/not_wired"
+                android:textAppearance="?attr/textAppearanceBodyMedium"
+                android:textColor="?attr/colorOnSurfaceVariant"/>
+
+            <com.google.android.material.progressindicator.LinearProgressIndicator
+                android:id="@+id/flash_progress"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:visibility="gone"/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="horizontal">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/connect"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/connect_otg"/>
+
+                <Space
+                    android:layout_width="10dp"
+                    android:layout_height="1dp"/>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/reread"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/reread"
+                    app:icon="@drawable/ic_refresh"/>
+            </LinearLayout>
+
+            <TextView
+                style="@style/Widget.Collmap.SectionLabel"
+                android:text="@string/section_state"/>
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <TextView
+                    android:id="@+id/board_status"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="14dp"
+                    android:text="@string/tilt_unknown"
+                    android:textAppearance="@style/TextAppearance.Collmap.Mono.Small"
+                    android:textColor="?attr/colorOnSurfaceVariant"/>
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                style="@style/Widget.Collmap.SectionLabel"
+                android:text="@string/section_controls"/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/run"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1.2"
+                    android:text="@string/run"/>
+
+                <Space android:layout_width="8dp" android:layout_height="1dp"/>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/one_step"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/one_step"/>
+
+                <Space android:layout_width="8dp" android:layout_height="1dp"/>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/sync"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/sync"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/minus90"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/minus_90"/>
+
+                <Space android:layout_width="8dp" android:layout_height="1dp"/>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/plus90"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/plus_90"/>
+
+                <Space android:layout_width="8dp" android:layout_height="1dp"/>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/zero"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/set_zero"/>
+
+                <Space android:layout_width="8dp" android:layout_height="1dp"/>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/release"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/release_motor"/>
+            </LinearLayout>
+
+            <TextView
+                style="@style/Widget.Collmap.SectionLabel"
+                android:text="@string/section_params"/>
+
+            <LinearLayout
+                android:id="@+id/fields"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:orientation="horizontal">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/save_board"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/save_to_board"/>
+
+                <Space android:layout_width="8dp" android:layout_height="1dp"/>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/defaults"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/restore_defaults"/>
+            </LinearLayout>
+
+            <TextView
+                style="@style/Widget.Collmap.SectionLabel"
+                android:text="@string/section_firmware"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/flash"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/flash_firmware"
+                app:icon="@drawable/ic_download"/>
+
+            <TextView
+                style="@style/Widget.Collmap.SectionLabel"
+                android:text="@string/section_log"/>
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <TextView
+                    android:id="@+id/log_view"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="12dp"
+                    android:textAppearance="@style/TextAppearance.Collmap.Mono.Small"
+                    android:textColor="?attr/colorOnSurfaceVariant"/>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+</LinearLayout>

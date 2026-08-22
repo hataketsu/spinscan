@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  "Mask": the ellipse and the three numbers that shape it.
+
+  The tallest of the four pages, so it scrolls rather than compressing its rows:
+  a page that scrolls is fine, a slider that cannot be hit with a thumb is not.
+-->
+<androidx.core.widget.NestedScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/mask_scroll"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="12dp">
+
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/mask_mode_group"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            app:selectionRequired="true"
+            app:singleSelection="true">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/mask_mode_off"
+                style="@style/Widget.Collmap.Button.Toggle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/mask_off"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/mask_mode_black"
+                style="@style/Widget.Collmap.Button.Toggle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/mask_black"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/mask_mode_crop"
+                style="@style/Widget.Collmap.Button.Toggle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/mask_crop"/>
+        </com.google.android.material.button.MaterialButtonToggleGroup>
+
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/mask_edit"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:minHeight="48dp"
+            android:text="@string/mask_edit"
+            android:textAppearance="?attr/textAppearanceBodyMedium"/>
+
+        <LinearLayout
+            android:id="@+id/mask_sliders"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <include android:id="@+id/row_mask_size" layout="@layout/view_slider_row"/>
+            <include android:id="@+id/row_mask_squash" layout="@layout/view_slider_row"/>
+            <include android:id="@+id/row_mask_rot" layout="@layout/view_slider_row"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/mask_reset"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/mask_reset"/>
+        </LinearLayout>
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

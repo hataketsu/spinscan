@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- "Ảnh": what the file looks like. -->
+<androidx.core.widget.NestedScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="8dp">
+
+        <TextView
+            style="@style/Widget.Collmap.SectionLabel"
+            android:paddingTop="4dp"
+            android:text="@string/label_ratio"/>
+
+        <!-- Filled in from what the camera really lists; a ratio the driver
+             does not offer is not shown at all. -->
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/ratio_group"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:selectionRequired="true"
+            app:singleSelection="true"/>
+
+        <TextView
+            style="@style/Widget.Collmap.SectionLabel"
+            android:text="@string/label_tier"/>
+
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/tier_group"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:selectionRequired="true"
+            app:singleSelection="true">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/tier_low"
+                style="@style/Widget.Collmap.Button.Toggle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/tier_low"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/tier_level"
+                style="@style/Widget.Collmap.Button.Toggle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/tier_level"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/tier_high"
+                style="@style/Widget.Collmap.Button.Toggle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/tier_high"/>
+        </com.google.android.material.button.MaterialButtonToggleGroup>
+
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/full_resolution"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="48dp"
+            android:layout_marginTop="12dp"
+            android:text="@string/label_resolution"
+            android:textAppearance="?attr/textAppearanceBodyMedium"/>
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

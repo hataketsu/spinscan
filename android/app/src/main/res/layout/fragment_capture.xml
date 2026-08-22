@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The viewfinder and the two strips over it.
+
+  Only the panel between the tabs and the shutter is paged. The preview, the
+  mask overlay and the top strip stay where they are: a horizontal drag on the
+  picture belongs to the mask ellipse, and if it paged the tabs the one gesture
+  the framing aid needs would be gone.
+
+  The shutter and the run button sit below the pager and never move, because
+  they are the only two controls wanted once the shooting has started.
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/capture_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/colorSurface">
+
+    <TextureView
+        android:id="@+id/texture"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
+
+    <vn.npay.collmap.MaskOverlay
+        android:id="@+id/mask_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
+
+    <LinearLayout
+        android:id="@+id/top_strip"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:background="@color/strip_scrim"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="16dp"
+        android:paddingTop="12dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="12dp">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/counter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="@style/TextAppearance.Collmap.Mono"
+                android:textColor="?attr/colorPrimary"/>
+
+            <TextView
+                android:id="@+id/plan"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:textColor="?attr/colorOnSurfaceVariant"/>
+
+            <TextView
+                android:id="@+id/state"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:textColor="?attr/colorOnSurfaceVariant"/>
+
+            <TextView
+                android:id="@+id/time"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="@style/TextAppearance.Collmap.Mono.Small"
+                android:textColor="?attr/colorPrimary"
+                android:visibility="gone"/>
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/zoom"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="12dp"
+            android:textAppearance="@style/TextAppearance.Collmap.Mono.Label"
+            android:textColor="?attr/colorOnSurfaceVariant"/>
+
+        <TextView
+            android:id="@+id/tilt"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/tilt_unknown"
+            android:textAppearance="@style/TextAppearance.Collmap.Mono.Label"
+            android:textColor="?attr/colorOnSurfaceVariant"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/bottom_strip"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:background="@color/strip_scrim"
+        android:orientation="vertical"
+        android:paddingBottom="12dp">
+
+        <com.google.android.material.tabs.TabLayout
+            android:id="@+id/capture_tabs"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:tabGravity="fill"
+            app:tabMode="fixed"/>
+
+        <androidx.viewpager2.widget.ViewPager2
+            android:id="@+id/capture_pager"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/capture_panel_height"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingStart="12dp"
+            android:paddingTop="8dp"
+            android:paddingEnd="12dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/shutter"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/shutter"
+                app:icon="@drawable/ic_capture"/>
+
+            <Space
+                android:layout_width="10dp"
+                android:layout_height="1dp"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/auto_run"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1.4"/>
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Shown instead of the camera when no project has been chosen yet: there
+         is nowhere to upload to, and a viewfinder that silently drops frames is
+         worse than saying so. -->
+    <LinearLayout
+        android:id="@+id/no_project"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="?attr/colorSurface"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="32dp"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="@string/no_project_selected"
+            android:textAppearance="?attr/textAppearanceBodyLarge"
+            android:textColor="?attr/colorOnSurfaceVariant"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/go_projects"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="@string/go_to_projects"/>
+    </LinearLayout>
+</FrameLayout>

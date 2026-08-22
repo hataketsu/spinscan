@@ -456,8 +456,9 @@ DIST = ROOT / "dist"
 
 @app.get("/api/app/latest")
 def app_latest():
-    """Manifest the phone polls. Written by android/build.sh next to the APK, so
-    the version it advertises can never drift from the file it serves."""
+    """Manifest the phone polls. Written by the app's :app:publishOta Gradle
+    task next to the APK, so the version it advertises can never drift from the
+    file it serves."""
     f = DIST / "latest.json"
     if not f.exists():
         raise HTTPException(404, "Chưa build APK nào")

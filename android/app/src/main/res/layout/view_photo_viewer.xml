@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/viewer"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/viewer_scrim"
+    android:clickable="true"
+    android:focusable="true"
+    android:visibility="gone">
+
+    <androidx.viewpager2.widget.ViewPager2
+        android:id="@+id/photo_pager"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="16dp"
+        android:paddingTop="12dp"
+        android:paddingEnd="8dp"
+        android:paddingBottom="12dp">
+
+        <TextView
+            android:id="@+id/viewer_label"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textAppearance="@style/TextAppearance.Collmap.Mono.Small"
+            android:textColor="?attr/colorPrimary"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/viewer_close"
+            style="@style/Widget.Material3.Button.IconButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:icon="@drawable/ic_close"/>
+    </LinearLayout>
+</FrameLayout>

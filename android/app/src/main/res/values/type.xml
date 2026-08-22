@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The type scale, pointed at the same two families the web UI uses: Be Vietnam
+  Pro for everything a person reads as prose, IBM Plex Mono for the things that
+  are really data: filenames, counters, board replies, the pipeline log.
+
+  Material 3's own text appearances hardcode a font family, so setting
+  android:fontFamily on the theme alone is not enough: each role has to be
+  re-pointed. That is what this file is, and it is why no view in the app sets
+  a typeface of its own.
+-->
+<resources>
+    <style name="TextAppearance.Collmap.DisplayLarge" parent="TextAppearance.Material3.DisplayLarge">
+        <item name="android:fontFamily">@font/be_vietnam_pro</item>
+        <item name="fontFamily">@font/be_vietnam_pro</item>
+    </style>
+    <style name="TextAppearance.Collmap.DisplayMedium" parent="TextAppearance.Material3.DisplayMedium">
+        <item name="android:fontFamily">@font/be_vietnam_pro</item>
+        <item name="fontFamily">@font/be_vietnam_pro</item>
+    </style>
+    <style name="TextAppearance.Collmap.DisplaySmall" parent="TextAppearance.Material3.DisplaySmall">
+        <item name="android:fontFamily">@font/be_vietnam_pro</item>
+        <item name="fontFamily">@font/be_vietnam_pro</item>
+    </style>
+    <style name="TextAppearance.Collmap.HeadlineLarge" parent="TextAppearance.Material3.HeadlineLarge">
+        <item name="android:fontFamily">@font/be_vietnam_pro</item>
+        <item name="fontFamily">@font/be_vietnam_pro</item>
+    </style>
+    <style name="TextAppearance.Collmap.HeadlineMedium" parent="TextAppearance.Material3.HeadlineMedium">
+        <item name="android:fontFamily">@font/be_vietnam_pro</item>
+        <item name="fontFamily">@font/be_vietnam_pro</item>
+    </style>
+    <style name="TextAppearance.Collmap.HeadlineSmall" parent="TextAppearance.Material3.HeadlineSmall">
+        <item name="android:fontFamily">@font/be_vietnam_pro</item>
+        <item name="fontFamily">@font/be_vietnam_pro</item>
+    </style>
+    <style name="TextAppearance.Collmap.TitleLarge" parent="TextAppearance.Material3.TitleLarge">
+        <item name="android:fontFamily">@font/be_vietnam_pro</item>
+        <item name="fontFamily">@font/be_vietnam_pro</item>
+    </style>
+    <style name="TextAppearance.Collmap.TitleMedium" parent="TextAppearance.Material3.TitleMedium">
+        <item name="android:fontFamily">@font/be_vietnam_pro</item>
+        <item name="fontFamily">@font/be_vietnam_pro</item>
+    </style>
+    <style name="TextAppearance.Collmap.TitleSmall" parent="TextAppearance.Material3.TitleSmall">
+        <item name="android:fontFamily">@font/be_vietnam_pro</item>
+        <item name="fontFamily">@font/be_vietnam_pro</item>
+    </style>
+    <style name="TextAppearance.Collmap.BodyLarge" parent="TextAppearance.Material3.BodyLarge">
+        <item name="android:fontFamily">@font/be_vietnam_pro</item>
+        <item name="fontFamily">@font/be_vietnam_pro</item>
+    </style>
+    <style name="TextAppearance.Collmap.BodyMedium" parent="TextAppearance.Material3.BodyMedium">
+        <item name="android:fontFamily">@font/be_vietnam_pro</item>
+        <item name="fontFamily">@font/be_vietnam_pro</item>
+    </style>
+    <style name="TextAppearance.Collmap.BodySmall" parent="TextAppearance.Material3.BodySmall">
+        <item name="android:fontFamily">@font/be_vietnam_pro</item>
+        <item name="fontFamily">@font/be_vietnam_pro</item>
+    </style>
+    <style name="TextAppearance.Collmap.LabelLarge" parent="TextAppearance.Material3.LabelLarge">
+        <item name="android:fontFamily">@font/be_vietnam_pro</item>
+        <item name="fontFamily">@font/be_vietnam_pro</item>
+    </style>
+    <style name="TextAppearance.Collmap.LabelMedium" parent="TextAppearance.Material3.LabelMedium">
+        <item name="android:fontFamily">@font/be_vietnam_pro</item>
+        <item name="fontFamily">@font/be_vietnam_pro</item>
+    </style>
+    <style name="TextAppearance.Collmap.LabelSmall" parent="TextAppearance.Material3.LabelSmall">
+        <item name="android:fontFamily">@font/be_vietnam_pro</item>
+        <item name="fontFamily">@font/be_vietnam_pro</item>
+    </style>
+
+    <!-- Data, not prose. -->
+    <style name="TextAppearance.Collmap.Mono" parent="TextAppearance.Material3.BodyMedium">
+        <item name="android:fontFamily">@font/ibm_plex_mono</item>
+        <item name="fontFamily">@font/ibm_plex_mono</item>
+    </style>
+    <style name="TextAppearance.Collmap.Mono.Small" parent="TextAppearance.Material3.BodySmall">
+        <item name="android:fontFamily">@font/ibm_plex_mono</item>
+        <item name="fontFamily">@font/ibm_plex_mono</item>
+    </style>
+    <style name="TextAppearance.Collmap.Mono.Label" parent="TextAppearance.Material3.LabelLarge">
+        <item name="android:fontFamily">@font/ibm_plex_mono</item>
+        <item name="fontFamily">@font/ibm_plex_mono</item>
+    </style>
+</resources>

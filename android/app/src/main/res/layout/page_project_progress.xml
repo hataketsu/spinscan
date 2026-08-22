@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingStart="@dimen/screen_margin"
+    android:paddingEnd="@dimen/screen_margin"
+    android:paddingBottom="24dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/stage"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:textAppearance="?attr/textAppearanceBodyLarge"/>
+
+        <com.google.android.material.progressindicator.LinearProgressIndicator
+            android:id="@+id/stage_bar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            app:trackCornerRadius="4dp"
+            app:trackThickness="6dp"/>
+
+        <TextView
+            style="@style/Widget.Collmap.SectionLabel"
+            android:text="@string/section_rebuild"/>
+
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/preset_group"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:selectionRequired="true"
+            app:singleSelection="true">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/preset_normal"
+                style="@style/Widget.Collmap.Button.Toggle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/preset_normal"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/preset_fast"
+                style="@style/Widget.Collmap.Button.Toggle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/preset_fast"/>
+        </com.google.android.material.button.MaterialButtonToggleGroup>
+
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/use_mask"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:minHeight="48dp"
+            android:text="@string/use_mask"
+            android:textAppearance="?attr/textAppearanceBodyMedium"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/run"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1.4"
+                android:text="@string/run_pipeline"/>
+
+            <Space
+                android:layout_width="10dp"
+                android:layout_height="1dp"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/stop"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/stop"/>
+        </LinearLayout>
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

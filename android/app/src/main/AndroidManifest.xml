@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <!-- OTA: the app downloads its own APK and hands it to the system installer,
+         which still shows the normal confirmation dialog. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
+    <!-- Only ever used for the "app updated, tap to reopen" notification. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
+    <uses-feature android:name="android.hardware.camera" android:required="true"/>
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false"/>
+    <!-- Only the turntable screen needs OTG; a phone without it still shoots. -->
+    <uses-feature android:name="android.hardware.usb.host" android:required="false"/>
+
+    <application
+        android:allowBackup="false"
+        android:hardwareAccelerated="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Collmap">
+
+        <!--
+          One activity now, three destinations on the bottom bar. The screens
+          that used to be activities are fragments inside it, which is what lets
+          the bar stay on screen for all of them and lets the capture screen keep
+          its camera open while the user looks at something else.
+
+          Locked to portrait, as the capture activity was: the phone sits in a
+          holder next to the turntable, the letterboxed preview is computed for
+          a portrait window, and a mid-session rotation would restart the camera
+          and break the interval run.
+        -->
+        <activity
+            android:name=".MainActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="true"
+            android:screenOrientation="portrait">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+
+        <!-- A self-update kills the process and Android does not bring it back.
+             MY_PACKAGE_REPLACED is a protected broadcast delivered only to the
+             replaced package, so the receiver stays unexported. -->
+        <receiver
+            android:name=".UpdatedReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

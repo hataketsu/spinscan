@@ -71,9 +71,32 @@ def gray_small(path: Path, height: int = BLUR_HEIGHT) -> np.ndarray | None:
     return np.asarray(im, dtype=np.float32)
 
 
-def laplacian_var(g: np.ndarray) -> float:
+def subject_mask(g: np.ndarray) -> np.ndarray:
+    """Which pixels are actually a photograph of something.
+
+    The capture app can black out everything outside the turntable before
+    upload, and that region is exactly 0. Counted as image, it poisons every
+    statistic here: an ellipse inscribed in a square frame leaves 1 - pi/4 =
+    21.5% pure black, so a "more than 20% of pixels below 8" test flags every
+    masked frame as underexposed, by construction rather than by observation.
+    Mean brightness gets dragged down the same way, and the Laplacian over a
+    flat region reads as perfect smoothness and deflates the sharpness figure.
+    """
+    dead = g <= 2.0
+    if dead.mean() < 0.03:
+        return np.ones_like(g, dtype=bool)   # no mask, keep everything
+    return ~dead
+
+
+def laplacian_var(g: np.ndarray, valid: np.ndarray | None = None) -> float:
     a = g[:-2, 1:-1] + g[2:, 1:-1] + g[1:-1, :-2] + g[1:-1, 2:] - 4.0 * g[1:-1, 1:-1]
-    return float(a.var())
+    if valid is None:
+        return float(a.var())
+    # Only where the whole 4-neighbourhood is real image: a pixel on the mask
+    # edge has a huge Laplacian purely because its neighbour is the black void.
+    inner = (valid[:-2, 1:-1] & valid[2:, 1:-1] & valid[1:-1, :-2]
+             & valid[1:-1, 2:] & valid[1:-1, 1:-1])
+    return float(a[inner].var()) if inner.any() else 0.0
 
 
 def image_metrics(image_dir: Path) -> dict:
@@ -86,15 +109,17 @@ def image_metrics(image_dir: Path) -> dict:
             continue
         with Image.open(f) as im:
             w, h = im.size
+        valid = subject_mask(g)
         rows.append({
             "name": f.name,
             "mp": round(w * h / 1e6, 1),
-            "sharp": round(laplacian_var(g), 1),
-            "bright": round(float(g.mean()) / 255, 3),
+            "sharp": round(laplacian_var(g, valid), 1),
+            "bright": round(float(g[valid].mean()) / 255, 3),
             # Clipping matters more than mean exposure: blown highlights and
             # crushed shadows carry no gradient, so SIFT finds nothing there.
-            "blown": round(float((g > 250).mean()), 4),
-            "dark": round(float((g < 8).mean()), 4),
+            "blown": round(float((g[valid] > 250).mean()), 4),
+            "dark": round(float((g[valid] < 8).mean()), 4),
+            "masked_out": round(1.0 - float(valid.mean()), 3),
         })
     if not rows:
         return {"count": 0}
@@ -109,6 +134,7 @@ def image_metrics(image_dir: Path) -> dict:
         # Half the median is roughly where a frame stops contributing features.
         "soft_frames": [r["name"] for r in rows if r["sharp"] < 0.5 * med],
         "brightness_median": round(float(np.median([r["bright"] for r in rows])), 3),
+        "masked_out_median": round(float(np.median([r["masked_out"] for r in rows])), 3),
         "frames_with_blown_highlights": [r["name"] for r in rows if r["blown"] > 0.02],
         "frames_too_dark": [r["name"] for r in rows if r["dark"] > 0.20],
         "per_image": rows,

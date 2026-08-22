@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="screen_margin">16dp</dimen>
+    <dimen name="gap">8dp</dimen>
+    <!-- A slider row is a label line plus the track. Material's minimum touch
+         target is 48dp and the label must not eat into it, so the track gets
+         its own 48dp and the label sits above it. -->
+    <dimen name="slider_track_height">48dp</dimen>
+    <dimen name="slider_row_spacing">16dp</dimen>
+    <!-- The paged control panel on the capture screen. Fixed, because a
+         ViewPager2 cannot wrap its content and the shutter below it must never
+         be pushed off a short phone. Pages that need more scroll. -->
+    <dimen name="capture_panel_height">224dp</dimen>
+</resources>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The web UI uses Be Vietnam Pro; the app bundles the two weights the
+     Material type scale actually asks for (400 body, 500 title/label). Bold is
+     synthesised from Medium rather than costing another 133 KB of TTF. -->
+<font-family xmlns:android="http://schemas.android.com/apk/res/android">
+    <font android:fontStyle="normal" android:fontWeight="400"
+        android:font="@font/be_vietnam_pro_regular"/>
+    <font android:fontStyle="normal" android:fontWeight="500"
+        android:font="@font/be_vietnam_pro_medium"/>
+</font-family>
