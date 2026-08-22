@@ -10,6 +10,8 @@
     <!-- OTA: the app downloads its own APK and hands it to the system installer,
          which still shows the normal confirmation dialog. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
+    <!-- Only ever used for the "app updated, tap to reopen" notification. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
     <uses-feature android:name="android.hardware.camera" android:required="true"/>
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false"/>
@@ -46,9 +48,26 @@
             android:keepScreenOn="true"/>
 
         <activity
+            android:name=".ProjectActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:configChanges="orientation|screenSize|keyboardHidden"/>
+
+        <activity
             android:name=".TurntableActivity"
             android:exported="false"
             android:screenOrientation="portrait"
             android:configChanges="orientation|screenSize|keyboardHidden"/>
+
+        <!-- A self-update kills the process and Android does not bring it back.
+             MY_PACKAGE_REPLACED is a protected broadcast delivered only to the
+             replaced package, so the receiver stays unexported. -->
+        <receiver
+            android:name=".UpdatedReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

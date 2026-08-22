@@ -156,7 +156,11 @@ def crop_all(files: list[Path], project: Path, mask_img: Image.Image,
     box = (max(0, int(xs.min()) - mx), max(0, int(ys.min()) - my),
            min(w, int(xs.max()) + mx), min(h, int(ys.max()) + my))
     cw, ch = box[2] - box[0], box[3] - box[1]
-    ratio = w / cw
+    # COLMAP turns the 35 mm equivalent into pixels with max(width, height), not
+    # width, so the crop factor has to be measured on the same axis. A portrait
+    # frame cropped mostly in height differs by more than a third between the
+    # two -- 4096/2918 against 3072/3020 on this rig.
+    ratio = max(w, h) / max(cw, ch)
 
     out_dir = project / "images_cropped"
     mask_dir = project / "masks_cropped"

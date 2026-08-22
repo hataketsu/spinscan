@@ -16,7 +16,7 @@ Không Klipper, không host, không bootloader.
 | PB12 | DIR |
 | PB10 | ENABLE X/Y/Z, tích cực mức thấp |
 | PB0 | Vref dòng X/Y, PWM 250 kHz trên TIM3_CH3 |
-| PD2 | còi (nằm trên header EXP1 — không cắm LCD thì đặt `BEEP_ENABLE 0`) |
+| PD2 | còi — **nằm trên header EXP1 của LCD, board trần không có**, nên mặc định tắt |
 
 Vi bước (microstep) trên board này do jumper dưới driver quyết định, không phải
 phần mềm. Jumper đang là bao nhiêu thì `MICROSTEPS` trong `config.h` phải đúng
@@ -139,7 +139,7 @@ cấp nguồn
   ├─ 72 MHz (HSE 8 MHz × 9), flash 2 wait state
   ├─ PB0 phát PWM 250 kHz → Vref = 30 % dòng
   ├─ PB10 xuống thấp → driver giữ bàn
-  ├─ bíp dài 150 ms = sẵn sàng
+  ├─ bíp dài 150 ms = sẵn sàng (chỉ khi có còi)
   └─ lặp mãi:
        bíp 40 ms  ← chụp lúc này
        đứng yên INTERVAL_MS

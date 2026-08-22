@@ -40,6 +40,7 @@ import android.view.TextureView
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
@@ -186,6 +187,9 @@ class CaptureActivity : Activity() {
     private lateinit var maskSquashBar: SeekBar
     private lateinit var maskRotBar: SeekBar
     private lateinit var zoomView: TextView
+    private lateinit var tabViews: List<TextView>
+    private lateinit var tabPanels: List<View>
+    private var tab = 0
     private lateinit var topStrip: View
     private lateinit var bottomStrip: View
 
@@ -210,6 +214,7 @@ class CaptureActivity : Activity() {
         zoom = prefs.getFloat(KEY_ZOOM, 1f)
         mask = Mask.load(prefs)
         maskMode = Mask.mode(prefs)
+        tab = prefs.getInt(KEY_TAB, 0)
         buildUi()
         sensors = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         accel = sensors?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
@@ -257,9 +262,11 @@ class CaptureActivity : Activity() {
             configureTransform(textureView.width, textureView.height)
         }
 
-        // bottom strip: three rows. Seven controls across a portrait phone would
-        // squeeze every label to an ellipsis, and the two framing controls are
-        // the ones a user checks before every run, so they get a row of their own.
+        /* Bottom strip: a row of tabs over one panel, with the shutter and the
+         * auto-run button below and always visible. Thirteen controls stacked in
+         * rows stopped being a layout a while ago -- and of all of them only
+         * those two are wanted once the shooting has actually started, so they
+         * are the two that never move and never scroll away. */
         val bottom = Ui.column(ctx).apply {
             setPadding(dp(12f), dp(10f), dp(12f), dp(14f))
             background = Ui.box(ctx, 0xAA0B0F14.toInt(), 0, 0f)
@@ -284,12 +291,23 @@ class CaptureActivity : Activity() {
                 row.addView(Ui.gap(ctx, 6f))
             }
         }
-        val settingsRow = Ui.row(ctx)
-        fill(settingsRow, listOf(lockButton to 1.3f, focusButton to 1.3f, tierButton to 0.8f))
+        // "Chụp": what a run is -- the numbers, and the plan they imply, which
+        // is spelled out on the top strip where it stays readable mid-run.
+        val runPanel = Ui.column(ctx)
         val runRow = Ui.row(ctx)
         fill(runRow, listOf(presetButton to 1f, shotsButton to 1f, intervalButton to 0.7f))
+        runPanel.addView(runRow, Ui.lp(MATCH, WRAP))
+
+        // "Ảnh": what the file looks like.
+        val imagePanel = Ui.column(ctx)
         val frameRow = Ui.row(ctx)
-        fill(frameRow, listOf(ratioButton to 0.8f, resButton to 0.8f, maskEditButton to 1.1f))
+        fill(frameRow, listOf(ratioButton to 0.8f, resButton to 0.8f, tierButton to 0.9f))
+        imagePanel.addView(frameRow, Ui.lp(MATCH, WRAP))
+
+        // "Nét": everything that has to hold still for the whole set.
+        val focusPanel = Ui.column(ctx)
+        val lockRow = Ui.row(ctx)
+        fill(lockRow, listOf(lockButton to 1.2f, focusButton to 1.2f))
         // Only shown in manual focus; a slider with nothing behind it is a trap.
         val focusLine = Ui.row(ctx)
         focusBar = SeekBar(ctx).apply { max = FOCUS_STEPS }
@@ -299,6 +317,16 @@ class CaptureActivity : Activity() {
         focusLine.addView(focusView, Ui.lp(WRAP, WRAP))
         focusLine.visibility = View.GONE
         focusRow = focusLine
+        focusPanel.addView(lockRow, Ui.lp(MATCH, WRAP))
+        focusPanel.addView(focusRow, Ui.lp(MATCH, WRAP, 0f, 6, ctx))
+        focusPanel.addView(
+            Ui.text(ctx, "Chụm hai ngón trên khung ngắm để đổi zoom · đọc ở góc trên",
+                12f, Ui.DIM), Ui.lp(MATCH, WRAP, 0f, 8, ctx))
+
+        // "Mask": the ellipse and the three numbers that shape it.
+        val maskPanel = Ui.column(ctx)
+        val maskRow = Ui.row(ctx)
+        fill(maskRow, listOf(maskButton to 2f, maskEditButton to 1.1f))
         // Sliders and not a pinch: pinch is already zoom, and a second meaning
         // for it would cost the one that is there.
         fun slider(name: String, bar: SeekBar): View = Ui.row(ctx).apply {
@@ -315,14 +343,34 @@ class CaptureActivity : Activity() {
             addView(maskResetButton, Ui.lp(MATCH, WRAP, 0f, 4, ctx))
             visibility = View.GONE
         }
+        maskPanel.addView(maskRow, Ui.lp(MATCH, WRAP))
+        maskPanel.addView(maskBars, Ui.lp(MATCH, WRAP, 0f, 4, ctx))
+
+        tabPanels = listOf(runPanel, imagePanel, focusPanel, maskPanel)
+        val panelBox = FrameLayout(ctx)
+        for (panel in tabPanels) panelBox.addView(panel, FrameLayout.LayoutParams(MATCH, WRAP))
+        /* The panel scrolls instead of growing: the tallest one is the mask, and
+         * on a short phone it would otherwise walk the shutter off the screen. */
+        val panelScroll = object : ScrollView(ctx) {
+            override fun onMeasure(widthSpec: Int, heightSpec: Int) = super.onMeasure(
+                widthSpec, MeasureSpec.makeMeasureSpec(dp(220f), MeasureSpec.AT_MOST))
+        }
+        panelScroll.addView(panelBox, FrameLayout.LayoutParams(MATCH, WRAP))
+
+        val tabRow = Ui.row(ctx)
+        tabViews = TAB_NAMES.mapIndexed { i, name ->
+            Ui.text(ctx, name, 14f, Ui.DIM).apply {
+                gravity = Gravity.CENTER
+                setPadding(0, dp(6f), 0, dp(8f))
+                setOnClickListener { selectTab(i) }
+            }
+        }
+        for (t in tabViews) tabRow.addView(t, Ui.lp(0, WRAP, 1f))
+
         val shutterRow = Ui.row(ctx)
         fill(shutterRow, listOf(shutter to 1f, autoButton to 1.4f))
-        bottom.addView(settingsRow, Ui.lp(MATCH, WRAP))
-        bottom.addView(runRow, Ui.lp(MATCH, WRAP, 0f, 8, ctx))
-        bottom.addView(frameRow, Ui.lp(MATCH, WRAP, 0f, 8, ctx))
-        bottom.addView(maskButton, Ui.lp(MATCH, WRAP, 0f, 8, ctx))
-        bottom.addView(focusRow, Ui.lp(MATCH, WRAP, 0f, 4, ctx))
-        bottom.addView(maskBars, Ui.lp(MATCH, WRAP, 0f, 4, ctx))
+        bottom.addView(tabRow, Ui.lp(MATCH, WRAP))
+        bottom.addView(panelScroll, Ui.lp(MATCH, WRAP))
         bottom.addView(shutterRow, Ui.lp(MATCH, WRAP, 0f, 8, ctx))
         root.addView(bottom, FrameLayout.LayoutParams(MATCH, WRAP, Gravity.BOTTOM))
         bottomStrip = bottom
@@ -381,6 +429,18 @@ class CaptureActivity : Activity() {
         })
         textureView.setOnTouchListener { _, e -> zoomDetector.onTouchEvent(e); true }
         syncMaskUi()
+        selectTab(tab)
+    }
+
+    /** Amber for the tab you are on, dim for the rest; that is enough of a
+     *  selected state without a widget library to draw an indicator with. */
+    private fun selectTab(index: Int) {
+        tab = index.coerceIn(0, tabPanels.size - 1)
+        tabViews.forEachIndexed { i, v -> v.setTextColor(if (i == tab) Ui.AMBER else Ui.DIM) }
+        tabPanels.forEachIndexed { i, v ->
+            v.visibility = if (i == tab) View.VISIBLE else View.GONE
+        }
+        prefs().edit().putInt(KEY_TAB, tab).apply()
     }
 
     private fun prefs() = getSharedPreferences(PREFS, MODE_PRIVATE)
@@ -504,37 +564,215 @@ class CaptureActivity : Activity() {
     private fun focusLabel(): String =
         if (focusDiopters <= 0.05f) "∞" else "%.2f m".format(1f / focusDiopters)
 
+    // ----------------------------------------------------------- run settings
+
+    /**
+     * A run is described by two numbers -- how many photos and how long between
+     * them -- and everything else follows: the step angle is 360/shots, the
+     * session lasts shots*interval. Those consequences are displayed rather
+     * than typed, which is the whole reason for setting it this way round.
+     */
+    private fun renderPlan() {
+        planView.text = "$shots ảnh · ${twoDp(360f / shots)}°/ảnh · ${roughly(shots * intervalMs)}"
+    }
+
+    /** Vietnamese writes the decimal with a comma, whatever the phone's locale. */
+    private fun twoDp(v: Float) = String.format(Locale.US, "%.2f", v).replace('.', ',')
+
+    private fun roughly(ms: Long): String =
+        if (ms < 60_000) "${ms / 1000} giây" else "${Math.round(ms / 60_000.0)} phút"
+
+    private fun clock(ms: Long): String {
+        val s = (ms / 1000).coerceAtLeast(0)
+        return if (s >= 3600) "%d:%02d:%02d".format(s / 3600, s % 3600 / 60, s % 60)
+               else "%02d:%02d".format(s / 60, s % 60)
+    }
+
+    private fun spoken(ms: Long): String {
+        val s = ms / 1000
+        return if (s < 60) "$s giây" else "${s / 60} phút %02d".format(s % 60)
+    }
+
+    /** Nothing that describes a run may change while the run is happening. */
+    private fun runFrozen(): Boolean {
+        if (!autoRunning) return false
+        toast("Đang chụp — dừng lại rồi mới đổi cài đặt")
+        return true
+    }
+
+    private fun cycleShots() {
+        if (runFrozen()) return
+        shots = SHOT_STEPS.firstOrNull { it > shots } ?: SHOT_STEPS.first()
+        onRunSettingChanged()
+    }
+
     private fun cycleInterval() {
-        val steps = listOf(2_000L, 3_000L, 4_000L, 5_000L, 6_000L, 8_000L, 12_000L)
-        intervalMs = steps[(steps.indexOf(intervalMs).coerceAtLeast(0) + 1) % steps.size]
+        if (runFrozen()) return
+        intervalMs = INTERVAL_STEPS.firstOrNull { it > intervalMs } ?: INTERVAL_STEPS.first()
+        onRunSettingChanged()
+    }
+
+    /** The cycles are a shortcut, not a cage: an object that rings for eight
+     *  seconds needs eight seconds, and 137 photos is a legitimate answer. */
+    private fun askNumber(title: String, value: Int, apply: (Int) -> Unit) {
+        val input = Ui.input(this, value.toString(), value.toString()).apply {
+            inputType = InputType.TYPE_CLASS_NUMBER
+        }
+        val wrap = Ui.column(this).apply {
+            setPadding(dp(20f), dp(20f), dp(20f), 0)
+            addView(input)
+        }
+        AlertDialog.Builder(this)
+            .setTitle(title)
+            .setView(wrap)
+            .setPositiveButton("OK") { _, _ ->
+                input.text.toString().trim().toIntOrNull()?.let(apply)
+            }
+            .setNegativeButton("Huỷ", null)
+            .show()
+    }
+
+    private fun cyclePreset() {
+        if (runFrozen()) return
+        preset = (preset + 1 + PRESETS.size) % PRESETS.size
+        val p = PRESETS[preset]
+        shots = p.shots
+        intervalMs = p.intervalMs
+        val resChanged = capResolution != p.cap
+        capResolution = p.cap
+        persistRun()
+        pushRunToBoard()
+        syncRunUi()
+        if (resChanged) {
+            closeCamera()
+            openCamera()
+        }
+    }
+
+    private fun presetLabel() = PRESETS.getOrNull(preset)?.name ?: "Tuỳ chỉnh"
+
+    /** One control touched by hand and the bundle no longer describes the
+     *  state, so the label stops claiming that it does. */
+    private fun onRunSettingChanged() {
+        preset = -1
+        persistRun()
+        pushRunToBoard()
+        syncRunUi()
+    }
+
+    private fun persistRun() {
+        prefs().edit()
+            .putInt(TurntableActivity.KEY_INTERVAL, intervalMs.toInt())
+            .putInt(TurntableActivity.KEY_SHOTS, shots)
+            .putInt(KEY_PRESET, preset)
+            .putBoolean(KEY_CAP, capResolution)
+            .apply()
+    }
+
+    /**
+     * The board is told how many photos, never how many steps: it divides
+     * steps_per_rev by the shot count itself and spreads the remainder over the
+     * revolution so the angle cannot drift, and only it knows its microstepping
+     * and its gearing.
+     *
+     * It follows the phone's interval too, because the table has to stand still
+     * for as long as the shutter waits or the two run out of step within a few
+     * nấc. Nothing goes down mid-sequence: there the board is stepped one nấc
+     * at a time and its "ok" to a SET would be mistaken for the answer to a STEP.
+     */
+    private fun pushRunToBoard() {
+        if (boardRunning) return
+        val serial = Ch340.shared?.takeIf { it.isOpen } ?: return
+        serial.send("SET shots $shots")
+        serial.send("SET interval $intervalMs")
+    }
+
+    private fun syncRunUi() {
+        shotsButton.text = "$shots ảnh"
         intervalButton.text = "${intervalMs / 1000}s"
+        resButton.text = if (capResolution) "12MP" else "Max"
+        presetButton.text = presetLabel()
+        presetButton.setTextColor(if (preset < 0) Ui.DIM else Ui.INK)
         if (!autoRunning) autoButton.text = autoLabel()
+        renderPlan()
         renderState()
-        getSharedPreferences(PREFS, MODE_PRIVATE).edit()
-            .putInt(TurntableActivity.KEY_INTERVAL, intervalMs.toInt()).apply()
-        /* An attached board follows the phone: the table must stand still for
-         * as long as the shutter waits, or the two run out of step within a
-         * few nấc. Nothing to do when shooting handheld, and nothing to do
-         * mid-sequence either -- there the board is stepped one nấc at a time
-         * and its own period never runs, while its "ok" would be mistaken for
-         * the answer to a STEP. */
-        if (!boardRunning) Ch340.shared?.takeIf { it.isOpen }?.send("SET interval $intervalMs")
+        updateCounter()
     }
 
     private fun cycleTier() {
+        if (runFrozen()) return
         tier = (tier + 1) % 3
         tierButton.text = listOf("Thấp", "Ngang", "Cao")[tier]
     }
 
     private fun toggleResolution() {
+        if (runFrozen()) return
         capResolution = !capResolution
-        resButton.text = if (capResolution) "12MP" else "Max"
+        preset = -1
+        persistRun()
+        syncRunUi()
         // Reopen so the still stream is rebuilt at the new size.
         closeCamera()
         openCamera()
     }
 
+    // ------------------------------------------------------------------- mask
+
+    private fun maskLabel() = "Vòng cắt: ${Mask.modeLabel(maskMode)}"
+
+    /**
+     * The mask decides the crop and the crop decides the intrinsics, so every
+     * frame of a set has to be cut by the same ellipse. Same rule as zoom, and
+     * the same refusal.
+     */
+    private fun maskFrozen(): Boolean {
+        if (!autoRunning) return false
+        toast("Đang chụp — dừng lại rồi mới đổi vòng cắt")
+        return true
+    }
+
+    private fun cycleMaskMode() {
+        if (maskFrozen()) return
+        maskMode = (maskMode + 1) % 3
+        Mask.setMode(prefs(), maskMode)
+        syncMaskUi()
+    }
+
+    private fun setMaskEditing(on: Boolean) {
+        if (on && maskFrozen()) return
+        maskEditing = on
+        syncMaskUi()
+    }
+
+    private fun syncMaskUi() {
+        maskButton.text = maskLabel()
+        maskButton.setTextColor(if (maskMode == Mask.MODE_OFF) Ui.INK else Ui.AMBER)
+        maskEditButton.text = if (maskEditing) "Xong vòng" else "Sửa vòng"
+        maskEditButton.setTextColor(if (maskEditing) Ui.AMBER else Ui.INK)
+        maskBars.visibility = if (maskEditing) View.VISIBLE else View.GONE
+        maskOverlay.editing = maskEditing
+        maskOverlay.showing = maskMode != Mask.MODE_OFF
+        if (maskEditing) syncMaskBars()
+    }
+
+    private fun syncMaskBars() {
+        val g = maskOverlay.geom
+        maskSizeBar.progress = barAt((g.rx - Mask.MIN_R) / (Mask.MAX_R - Mask.MIN_R))
+        maskSquashBar.progress =
+            barAt((maskOverlay.squash() - SQUASH_MIN) / (SQUASH_MAX - SQUASH_MIN))
+        maskRotBar.progress = barAt((g.rot / Mask.ROT_MAX + 1f) / 2f)
+    }
+
+    private fun barAt(f: Float) = (f.coerceIn(0f, 1f) * MASK_STEPS).toInt()
+
+    /** Once per session: a mask that cannot run should not bury the screen. */
+    private fun warnMaskFailed() {
+        if (!maskWarned.compareAndSet(false, true)) return
+        main.post { toast("Hết bộ nhớ cho vòng cắt — gửi ảnh gốc") }
+    }
+
     private fun cycleRatio() {
+        if (runFrozen()) return
         if (ratioOptions.size < 2) {
             toast("Camera chỉ báo một tỉ lệ ảnh: $ratio")
             return
@@ -727,6 +965,10 @@ class CaptureActivity : Activity() {
         matrix.setScale(frameW / viewW, frameH / viewH, viewW / 2f, viewH / 2f)
         matrix.postTranslate(0f, centreY - viewH / 2f)
         textureView.setTransform(matrix)
+        // The mask is stored in fractions of this rectangle -- the frame that
+        // ends up in the file -- and not of the view it is letterboxed into.
+        maskOverlay.setFrame((viewW - frameW) / 2f, centreY - frameH / 2f,
+            (viewW + frameW) / 2f, centreY + frameH / 2f)
     }
 
     private val deviceCallback = object : CameraDevice.StateCallback() {
@@ -879,22 +1121,32 @@ class CaptureActivity : Activity() {
 
     // -------------------------------------------------------------- capture
 
+    /**
+     * A run is the whole session: press start once and the rig shoots all
+     * [shots] frames and stops by itself, board-stepped or on the timer. A
+     * half-finished run is never resumed -- the table is no longer at a known
+     * angle -- so every start begins the count again from zero.
+     */
     private fun startAuto() {
         if (autoRunning) return
         if (!locked) {
             toast("Nên khoá AE/AF trước khi chạy tự động")
         }
-        if (boardAttached()) {
-            startBoardRun()
-            return
-        }
+        if (maskEditing) setMaskEditing(false)
         autoRunning = true
+        runId++
+        frameIndex = 0
+        requested = 0
+        runFailedAt = failed.get()
+        runStart = SystemClock.elapsedRealtime()
         markRunning()
-        main.post(autoTick)
+        updateCounter()
+        renderTime()
+        main.post(timeTick)
+        if (boardAttached()) startBoardRun() else main.post(autoTick)
     }
 
     private fun stopAuto() {
-        val wasBoard = boardRunning
         autoRunning = false
         boardRunning = false
         awaitingStep = false
@@ -902,11 +1154,26 @@ class CaptureActivity : Activity() {
         frameRetries = 0
         main.removeCallbacks(autoTick)
         main.removeCallbacks(stallGuard)
+        main.removeCallbacks(timeTick)
         if (::autoButton.isInitialized) {
             autoButton.text = autoLabel()
             autoButton.setTextColor(Ui.AMBER)
         }
-        if (wasBoard) updateCounter()
+        if (::timeView.isInitialized) timeView.visibility = View.GONE
+        updateCounter()
+    }
+
+    /**
+     * The end of a run is announced and not merely silent: the user is across
+     * the room, which is the same reason an attached board is asked to beep.
+     */
+    private fun finishRun() {
+        val n = frameIndex
+        val errs = failed.get() - runFailedAt
+        val took = SystemClock.elapsedRealtime() - runStart
+        stopAuto()
+        Ch340.shared?.takeIf { it.isOpen }?.send("BEEP")
+        toast("Xong $n ảnh · ${spoken(took)} · $errs lỗi")
     }
 
     private fun markRunning() {
@@ -914,13 +1181,20 @@ class CaptureActivity : Activity() {
         autoButton.setTextColor(Ui.RED)
     }
 
-    private fun autoLabel() =
-        if (boardAttached()) "Bắt đầu vòng" else "Bắt đầu ${intervalMs / 1000}s"
+    private fun autoLabel() = "Bắt đầu $shots ảnh"
 
     /** Free-running mode: the phone's clock, used only with no board attached. */
     private val autoTick = object : Runnable {
         override fun run() {
             if (!autoRunning) return
+            if (requested >= shots) {
+                /* Every frame has been asked for. The run ends when the last
+                 * one lands; this guard only covers the one that never does. */
+                val id = runId
+                main.postDelayed({ if (autoRunning && runId == id) finishRun() }, FRAME_TIMEOUT_MS)
+                return
+            }
+            requested++
             requestCapture(manual = false)
             main.postDelayed(this, intervalMs)
         }
@@ -942,17 +1216,12 @@ class CaptureActivity : Activity() {
      * and the run ends by itself after a full revolution.
      */
     private fun startBoardRun() {
-        if (boardShots <= 0) {
-            Ch340.shared?.send("?")
-            toast("Chưa đọc được số nấc mỗi vòng — thử lại sau một giây")
-            return
-        }
-        autoRunning = true
         boardRunning = true
-        boardIndex = 0
         frameRetries = 0
-        markRunning()
-        updateCounter()
+        /* The table is wherever the last run left it, so the board is told to
+         * call this position index 0: the sequence and the table have to agree
+         * on where the revolution begins. */
+        Ch340.shared?.takeIf { it.isOpen }?.send("ZERO")
         shootBoardFrame()
     }
 
@@ -969,18 +1238,21 @@ class CaptureActivity : Activity() {
      * the request is queued, with the exposure and the readout still to come.
      */
     private fun onFrameQueued() {
-        if (!boardRunning || !awaitingFrame) return
-        awaitingFrame = false
-        frameRetries = 0
-        main.removeCallbacks(stallGuard)
-        boardIndex++
+        if (!autoRunning) return
+        if (boardRunning) {
+            if (!awaitingFrame) return
+            awaitingFrame = false
+            frameRetries = 0
+            main.removeCallbacks(stallGuard)
+        }
+        frameIndex++
         updateCounter()
-        if (boardIndex >= boardShots) {
-            stopAuto()
-            toast("Xong một vòng: $boardShots ảnh")
+        renderTime()
+        if (frameIndex >= shots) {
+            finishRun()
             return
         }
-        main.postDelayed({ if (boardRunning) stepBoard() }, STEP_GUARD_MS)
+        if (boardRunning) main.postDelayed({ if (boardRunning) stepBoard() }, STEP_GUARD_MS)
     }
 
     private fun stepBoard() {
@@ -1013,8 +1285,15 @@ class CaptureActivity : Activity() {
     private val boardListener = object : Ch340.Listener {
         override fun onLine(line: String) {
             if (line.startsWith("shots=")) {
-                boardShots = line.substring(6).trim().toIntOrNull() ?: boardShots
-                if (boardRunning) updateCounter()
+                /* On connect the board is the source of truth and seeds the
+                 * count; from then on the app is, and pushes changes down. */
+                val n = line.substring(6).trim().toIntOrNull()
+                if (n != null && n in MIN_SHOTS..MAX_SHOTS && n != shots && !autoRunning) {
+                    shots = n
+                    preset = -1
+                    persistRun()
+                    syncRunUi()
+                }
             }
             if (awaitingStep && line == "ok") onStepDone()
         }
@@ -1112,15 +1391,24 @@ class CaptureActivity : Activity() {
         pending.incrementAndGet()
         val tierTag = listOf("low", "mid", "high")[tier]
         val name = "%s_%04d_%d.jpg".format(tierTag, n, System.currentTimeMillis() % 100000)
+        val geom = mask
+        val mode = maskMode
+        val cache = cacheDir
         updateCounter()
         uploads.execute {
+            /* The mask runs here and not on the main thread: a 12 MP decode
+             * plus re-encode is far too slow for the UI, and it must not stand
+             * between the table and the next shutter. A frame that cannot be
+             * masked goes up untouched -- losing the mask beats losing the shot. */
+            val data = if (mode == Mask.MODE_OFF) jpeg
+                       else Mask.process(jpeg, geom, mode, cache) ?: jpeg.also { warnMaskFailed() }
             var ok = false
             var lastError = ""
             // One retry: a single dropped frame on a flaky link is normal, a second
             // failure in a row means the rig is gone and retrying just piles up.
             for (attempt in 0..1) {
                 try {
-                    Net.uploadPhoto(server, project, name, jpeg)
+                    Net.uploadPhoto(server, project, name, data)
                     ok = true
                     break
                 } catch (e: Exception) {
@@ -1155,13 +1443,39 @@ class CaptureActivity : Activity() {
         main.post {
             val f = failed.get()
             counterView.text = buildString {
-                if (boardRunning) append("$boardIndex/$boardShots ảnh")
+                if (autoRunning) append("$frameIndex/$shots ảnh")
                 else append("${shot.get()} ảnh")
                 if (pending.get() > 0) append(" · đang gửi ${pending.get()}")
                 if (f > 0) append(" · hỏng $f")
             }
             counterView.setTextColor(if (f > 0) Ui.RED else Ui.AMBER)
         }
+    }
+
+    /** A display timer over values the run loop already keeps; it adds nothing
+     *  to the capture path. */
+    private val timeTick = object : Runnable {
+        override fun run() {
+            if (!autoRunning) return
+            renderTime()
+            main.postDelayed(this, 1_000)
+        }
+    }
+
+    private fun renderTime() {
+        if (!autoRunning) {
+            timeView.visibility = View.GONE
+            return
+        }
+        val elapsed = SystemClock.elapsedRealtime() - runStart
+        val left = (shots - frameIndex).coerceAtLeast(0)
+        /* Measured, never assumed. The nominal interval leaves out the stillness
+         * gate, the STEP round trip and the upload, so a plan-based estimate is
+         * optimistic every single time and stops being believed after one run.
+         * Only the very first frame, with nothing measured yet, uses the plan. */
+        val eta = if (frameIndex > 0) elapsed / frameIndex * left else intervalMs * left
+        timeView.visibility = View.VISIBLE
+        timeView.text = "${clock(elapsed)} đã chạy · còn ~${clock(eta)}"
     }
 
     // ------------------------------------------------------------ live view
@@ -1206,8 +1520,21 @@ class CaptureActivity : Activity() {
             liveBusy.set(false)
             return
         }
+        /* Whoever is watching the web page sees the same keep region as whoever
+         * is standing at the rig. Cheap by construction: the frame is 480 px, so
+         * this is two paths on a small bitmap. The geometry is read here, on the
+         * main thread, because it is view state. */
+        val showMask = maskMode != Mask.MODE_OFF || maskEditing
+        val fr = maskOverlay.frame
+        val liveFrame = if (showMask && fr.width() > 0f) scaled(fr, scale) else null
+        val liveOval = scaled(maskOverlay.oval(), scale)
+        val liveRot = maskOverlay.geom.rot
+        val liveStroke = dp(1f).toFloat()
         liveSender.execute {
             try {
+                if (liveFrame != null) {
+                    Mask.drawScrim(Canvas(bmp), liveFrame, liveOval, liveRot, liveStroke)
+                }
                 val out = ByteArrayOutputStream()
                 bmp.compress(Bitmap.CompressFormat.JPEG, LIVE_QUALITY, out)
                 Net.postBytes(server, "/api/projects/${Net.enc(project)}/live",
@@ -1315,6 +1642,9 @@ class CaptureActivity : Activity() {
         imageReader = null
     }
 
+    private fun scaled(r: RectF, s: Float) =
+        RectF(r.left * s, r.top * s, r.right * s, r.bottom * s)
+
     private fun toast(s: String) = Toast.makeText(this, s, Toast.LENGTH_SHORT).show()
 
     companion object {
@@ -1342,6 +1672,48 @@ class CaptureActivity : Activity() {
         private const val PREFS = "collmap"
         private const val KEY_RATIO = "jpeg_ratio"
         private const val KEY_ZOOM = "zoom"
+        private const val KEY_PRESET = "preset"
+        private const val KEY_TAB = "capture_tab"
+        private val TAB_NAMES = listOf("Chụp", "Ảnh", "Nét", "Mask")
+        private const val KEY_CAP = "cap_res"
+        private const val DEFAULT_SHOTS = 120
+        /** "Chuẩn": the one actually measured end to end on this rig. */
+        private const val DEFAULT_PRESET = 1
+        private const val MIN_SHOTS = 8
+        private const val MAX_SHOTS = 2000
+        private val SHOT_STEPS = listOf(36, 48, 60, 72, 90, 120, 180)
+        private val INTERVAL_STEPS =
+            listOf(2_000L, 3_000L, 4_000L, 5_000L, 6_000L, 8_000L, 12_000L)
+        /** Slider resolution for the mask; the geometry behind it is continuous. */
+        private const val MASK_STEPS = 1000
+        /** On-screen ry/rx: 1.0 is a circle, below it the disc is squashed. */
+        private const val SQUASH_MIN = 0.25f
+        private const val SQUASH_MAX = 1.25f
+
+        private data class Preset(val name: String, val shots: Int, val intervalMs: Long,
+                                  val cap: Boolean)
+
+        /**
+         * The bundles worth a single tap. Each exists for a different reason:
+         *
+         *  - Thử nhanh: 6°/ảnh in three minutes, to check the light, the framing
+         *    and the mask before committing to a real run.
+         *  - Chuẩn: the one that was measured end to end on this rig -- 115
+         *    frames gave 115/115 registered, 5141 observations per image and
+         *    0.79 px reprojection error. It is the default for that reason.
+         *  - Kỹ: more angles and the full sensor, for a subject with fine
+         *    relief. It costs disk and upload roughly in proportion, and COLMAP
+         *    downsizes to 1600-3200 px for features anyway, so the gain is in
+         *    the dense stage and not in matching.
+         *  - Vật lắc: fewer, slower steps for something tall or springy that
+         *    keeps ringing after the table stops. The long interval is settle
+         *    time, which is the only real cure for a smeared frame.
+         */
+        private val PRESETS = listOf(
+            Preset("Thử nhanh", 60, 3_000L, true),
+            Preset("Chuẩn", 120, 3_000L, true),
+            Preset("Kỹ", 180, 4_000L, false),
+            Preset("Vật lắc", 90, 6_000L, true))
         /** Slider resolution; dioptres are a continuous value behind it. */
         private const val FOCUS_STEPS = 1000
         private const val DEFAULT_RATIO = "4:3"

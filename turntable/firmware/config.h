@@ -42,8 +42,12 @@
 
 /* ---- feedback ----------------------------------------------------------- */
 
-/* Short beep at the start of every still window: that is the moment to shoot. */
-#define BEEP_ENABLE 1
+/* Short beep at the start of every still window: that is the moment to shoot.
+ *
+ * Off by default: the buzzer lives on the LCD's EXP1 header, not on the board
+ * itself, so a bare ET4000+ has nothing to make a sound with and PD2 just
+ * toggles into thin air. Turn it on with `SET beep 1` if a panel is attached. */
+#define BEEP_ENABLE 0
 #define BEEP_HZ     2200
 #define BEEP_MS     40
 

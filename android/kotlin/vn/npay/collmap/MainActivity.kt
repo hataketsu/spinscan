@@ -3,12 +3,14 @@ package vn.npay.collmap
 import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
+import android.app.NotificationManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageInstaller
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -87,9 +89,11 @@ class MainActivity : Activity() {
         connect.setOnClickListener { refresh() }
         create.setOnClickListener { createProject() }
 
-        if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(arrayOf(Manifest.permission.CAMERA), 1)
-        }
+        requestMissingPermissions()
+        // The "đã cập nhật" notification has done its job the moment the app is
+        // open again; leaving it in the shade is litter.
+        getSystemService(NotificationManager::class.java)
+            ?.cancel(UpdatedReceiver.NOTIFICATION_ID)
         registerInstallReceiver()
         refresh()
     }
@@ -97,6 +101,24 @@ class MainActivity : Activity() {
     override fun onResume() {
         super.onResume()
         if (connectedOnce) refresh()
+    }
+
+    /**
+     * Camera is the obvious one. Notifications are asked for in the same breath
+     * because the only notification this app ever posts is the "mở lại" after a
+     * self-update, and on Android 13 that needs the runtime grant to appear.
+     */
+    private fun requestMissingPermissions() {
+        val want = mutableListOf<String>()
+        if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            want += Manifest.permission.CAMERA
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
+            != PackageManager.PERMISSION_GRANTED) {
+            want += Manifest.permission.POST_NOTIFICATIONS
+        }
+        if (want.isNotEmpty()) requestPermissions(want.toTypedArray(), 1)
     }
 
     override fun onDestroy() {
@@ -155,14 +177,27 @@ class MainActivity : Activity() {
                 "${p.optInt("images")} ảnh · ${p.optJSONArray("outputs")?.length() ?: 0} kết quả",
                 13f, Ui.DIM))
 
-            val shoot = Ui.button(ctx, "Chụp vào project này", Ui.AMBER)
+            // Two ways in: shoot into it, or look at what is already there --
+            // progress, photos, log and results, without walking to a laptop.
+            val open = Ui.button(ctx, "Xem")
+            open.setOnClickListener {
+                startActivity(Intent(ctx, ProjectActivity::class.java).apply {
+                    putExtra("server", server())
+                    putExtra("project", name)
+                })
+            }
+            val shoot = Ui.button(ctx, "Chụp", Ui.AMBER)
             shoot.setOnClickListener {
                 startActivity(Intent(ctx, CaptureActivity::class.java).apply {
                     putExtra("server", server())
                     putExtra("project", name)
                 })
             }
-            card.addView(shoot, Ui.lp(MATCH, WRAP, 0f, 10, ctx))
+            val cardActions = Ui.row(ctx)
+            cardActions.addView(open, Ui.lp(0, WRAP, 1f))
+            cardActions.addView(Ui.gap(ctx, 10f))
+            cardActions.addView(shoot, Ui.lp(0, WRAP, 1f))
+            card.addView(cardActions, Ui.lp(MATCH, WRAP, 0f, 10, ctx))
             projectList.addView(card, Ui.lp(MATCH, WRAP, 0f, 8, ctx))
         }
     }

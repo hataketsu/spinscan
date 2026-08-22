@@ -220,7 +220,7 @@ object Mask {
                     xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
                 })
                 canvas.drawColor(Color.BLACK, PorterDuff.Mode.DST_OVER)
-                focalScale = w.toFloat() / cw
+                focalScale = maxOf(w, h).toFloat() / maxOf(cw, ch)
             }
 
             val bytes = ByteArrayOutputStream(jpeg.size).also {
@@ -249,8 +249,9 @@ object Mask {
     /**
      * COLMAP reads FocalLengthIn35mmFilm and turns it into pixels using the
      * image width, so a crop that narrows the frame without touching the lens
-     * has to carry a 35 mm equivalent multiplied by (original width / cropped
-     * width). Left at the camera's value it hands the mapper a focal length
+     * has to carry a 35 mm equivalent multiplied by the crop factor on
+     * that same axis -- max(width, height), which is what COLMAP measures
+     * against, not width. Left at the camera's value it hands the mapper a focal length
      * wrong by exactly that factor, which is worse than no prior at all.
      *
      * [focalScale] is 1 for [MODE_BLACK] and the tag is then copied untouched:
@@ -322,7 +323,7 @@ class MaskOverlay(ctx: Context) : View(ctx) {
 
     private var lastX = 0f
     private var lastY = 0f
-    private val stroke = dp(2f).toFloat()
+    private val stroke = ctx.dp(2f).toFloat()
 
     fun setFrame(l: Float, t: Float, r: Float, b: Float) {
         frame.set(l, t, r, b)
