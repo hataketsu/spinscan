@@ -283,6 +283,29 @@ def build(fused: Path, p: Params, cache: Path) -> trimesh.Trimesh:
 # objective quality
 # --------------------------------------------------------------------------- #
 
+def support_up(fused: Path, limit: int = 200_000, seed: int = 0) -> np.ndarray | None:
+    """Unit normal of the support plane, pointing towards the object.
+
+    Needed because the underside of a turntable capture is never photographed:
+    it is closed with a cap so the mesh can be printed, and that cap is invented
+    surface. Scoring it alongside the measured surface drags every metric
+    towards whatever the cap happens to look like, and pushes the search to
+    optimise a face nobody will ever see.
+    """
+    pc = trimesh.load(fused, process=False)
+    pts = np.asarray(pc.vertices)
+    if len(pts) > limit:
+        pts = pts[np.random.default_rng(seed).choice(len(pts), limit, replace=False)]
+    if len(pts) < 100:
+        return None
+    n, d, tol = fit_plane(pts)
+    signed = pts @ n - d
+    above, below = (signed > tol).sum(), (signed < -tol).sum()
+    if max(above, below) < 0.05 * len(pts):
+        return None
+    return n if above > below else -n
+
+
 def cloud_points(fused: Path, limit: int = 300_000, seed: int = 0,
                  drop_plane: bool = True) -> np.ndarray:
     """Reference points for the fidelity metrics: the object, without its sheet.
@@ -305,7 +328,8 @@ def cloud_points(fused: Path, limit: int = 300_000, seed: int = 0,
     return pts
 
 
-def metrics(m: trimesh.Trimesh, cloud: np.ndarray) -> dict:
+def metrics(m: trimesh.Trimesh, cloud: np.ndarray,
+            up: np.ndarray | None = None) -> dict:
     """How well the mesh agrees with the dense cloud it came from, plus the
     printability facts. The cloud is the only ground truth available, so both
     directions are measured: drift (mesh invents surface) and coverage (mesh
@@ -315,7 +339,18 @@ def metrics(m: trimesh.Trimesh, cloud: np.ndarray) -> dict:
     # Sample the surface rather than using vertices: a vertex-based distance
     # rewards dense meshes for being dense, which would make the score push
     # face count up forever instead of judging the shape.
-    surf, _ = trimesh.sample.sample_surface(m, min(400_000, max(50_000, len(m.faces) * 4)))
+    n_samples = min(400_000, max(50_000, len(m.faces) * 4))
+    surf, face_idx = trimesh.sample.sample_surface(m, n_samples)
+    # Judge only the surface that was actually photographed. Everything facing
+    # the turntable is either the cap or a sliver the cameras never saw, and
+    # including it measures the repair rather than the reconstruction.
+    if up is not None:
+        facing = m.face_normals[face_idx] @ up
+        seen = facing > 0.0
+        if seen.sum() > 0.2 * len(seen):
+            surf = surf[seen]
+        else:
+            up = None
     tree = cKDTree(cloud)
     d_mesh, _ = tree.query(surf, workers=-1)       # mesh -> cloud: invented surface
     mtree = cKDTree(surf)
@@ -336,6 +371,7 @@ def metrics(m: trimesh.Trimesh, cloud: np.ndarray) -> dict:
         # repair bridges a genuine through-hole -- the patch is small -- but the
         # patch is entirely invented, and this counts it.
         "unsupported": round(float((d_mesh > eps).mean()), 4),
+        "top_only": up is not None,
         "extents": [round(float(x), 4) for x in m.extents],
         "volume": round(float(m.volume), 6) if m.is_watertight else None,
     }
@@ -361,12 +397,15 @@ def score(mt: dict) -> float:
     return round(s, 3)
 
 
-def evaluate(fused: Path, p: Params, cache: Path, cloud: np.ndarray | None = None) -> dict:
+def evaluate(fused: Path, p: Params, cache: Path, cloud: np.ndarray | None = None,
+             up: np.ndarray | None = None) -> dict:
     t0 = time.time()
     m = build(fused, p, cache)
     if cloud is None:
         cloud = cloud_points(fused)
-    mt = metrics(m, cloud)
+    if up is None:
+        up = support_up(fused)
+    mt = metrics(m, cloud, up)
     mt["seconds"] = round(time.time() - t0, 1)
     return {"params": asdict(p), "metrics": mt, "score": score(mt), "mesh": m}
 

@@ -324,3 +324,184 @@ xuống đĩa** — đó là ảnh xem tạm, ghi ra chỉ tổ băm nát thư m
 
 Khung cũ hiển thị như đang trực tiếp còn tệ hơn là thú nhận mất tín hiệu, nên quá
 10 giây là trả 404 chứ không trả ảnh cũ.
+
+## Bù độ sâu bằng mạng nơ-ron (`neural_depth.py`)
+
+`patch_match_stereo` chỉ ghi độ sâu ở chỗ nó khớp được vân bề mặt giữa các
+khung. Nhựa bóng, kim loại trần, mặt gương thì không có gì để khớp, pixel trả về
+0 và vật đơn giản là không có hình học ở đó. Mạng đơn ảnh thì luôn trả lời —
+đúng vì thế mà nó **không bao giờ được phép đè lên số đo**. Đo thắng suy diễn;
+suy diễn chỉ dành cho chỗ chưa đo được gì.
+
+```bash
+./.venv/bin/python neural_depth.py projects/<tên> [--model vits|vitb|vitl] [--max-fill 0.35]
+```
+
+Lần chạy đầu tự cài `torch`/`torchvision` (wheel CUDA 12.4) và `transformers`
+vào `.venv` nếu chưa có, rồi tải Depth Anything V2 về `~/.cache/huggingface`.
+Mặc định `vits`. `vitb` đã được đo song song: khác biệt không sống sót qua sàn
+nhiễu của các chỉ số mesh, còn trên chỉ số tất định (điểm bù nằm cách bề mặt đo
+được bao xa) thì hai bên đổi chỗ cho nhau — `vits` đặt ít điểm ra xa hơn
+(0,091 % so với 0,153 % số điểm), `vitb` đặt nhiều hơn nhưng gần hơn một chút.
+Chưa lần nào model nhỏ tỏ ra là chỗ nghẽn, nên `vitl` cố tình chưa thử: 1,3 GB
+trọng số để trả lời một câu chưa ai hỏi.
+
+### Chỗ khó duy nhất: lấy lại tỉ lệ
+
+Depth Anything trả về **nghịch đảo độ sâu tương đối**: không tỉ lệ, không gốc.
+Quan hệ affine chỉ đúng trong không gian `1/z`, nên phép khớp làm ở đó:
+
+    1/z_colmap  ≈  s · pred + t
+
+và hai số `s, t` được đòi lại từ chính depth map của COLMAP, trên những pixel
+COLMAP *đã* thành công. Bình phương tối thiểu thô không dùng được: depth map
+photometric có cái đuôi ngoại lai dài tới vài lần kích thước cảnh, chỉ vài điểm
+là kéo lệch cả khung. Nên: RANSAC trên từng cặp điểm để tìm đồng thuận, rồi ba
+vòng IRLS (Tukey) tinh lại trên toàn bộ inlier. Ngưỡng inlier là **tương đối**
+(`|q̂−q| < 3 %·q`) — trong không gian nghịch đảo, sai số tương đối bằng đúng sai
+số tương đối tính bằng mét, nên một ngưỡng dùng chung cho gần và xa.
+
+Khung nào khớp không đạt (inlier < 45 %, hoặc `s ≤ 0`, hoặc phải lấp quá
+`--max-fill` khung hình) thì **bỏ hẳn**, không lấp. Mất một chút độ phủ còn hơn
+nhét vào một mặt sai tỉ lệ — mặt đó đầu độc cả những khung chồng lấn với nó.
+
+Đo trên bộ `2` (240 ảnh): inlier trung vị **95–97 %**, sai số tương đối trung vị
+**0,46–0,58 %**. Nghĩa là mô hình đơn ảnh khớp với hình học đo được tới quanh
+nửa phần trăm — phần khớp tỉ lệ không phải chỗ yếu.
+
+### Cách ghi ra
+
+Depth map bù ghi vào cây song song `workspace/neural/`, `images/` và `sparse/`
+hard link như `preview.sh` làm (2 GB, chỉ đọc, link tốn một inode). `depth_maps/`
+và `normal_maps/` thì **tuyệt đối không link** — ghi qua hard link là ghi thẳng
+vào inode gốc, tức là phá luôn depth map cổ điển mà cả phép so sánh dựa vào.
+File nào sửa thì tạo mới, file nào giữ nguyên mới được link.
+
+Normal map phải có thì `stereo_fusion` mới chạy. Normal cho pixel được lấp tính
+bằng sai phân trung tâm trên chính depth map đã bù, trong hệ toạ độ máy ảnh, lấy
+nội tham số từ `sparse/cameras.bin`; chỗ COLMAP có đo thì giữ nguyên normal của
+COLMAP. Pixel nào không lấy được normal (4 điểm lân cận không đủ, hoặc vắt qua
+mép lỗ) thì trả độ sâu về 0 luôn — thà bỏ còn hơn đưa cho fusion một normal chỉ
+vào hư không.
+
+`--StereoFusion.min_num_pixels` đọc ngược từ `run.log` của lượt dựng cũ, **không**
+nới ra. Kiểm tra nhất quán đa góc nhìn của fusion là tuyến phòng thủ thứ hai:
+một mặt suy diễn mà không góc nào khác đồng ý thì vẫn phải bị loại.
+
+Lưu ý về `colmap::Mat`: header ASCII `width&height&channels&`, phần dữ liệu là
+**slice-major** (`slice*w*h + row*w + col`), không phải xen kẽ kênh. Đọc normal
+map theo kiểu xen kẽ ra một mảng trông rất hợp lý mà độ dài còn chẳng bằng 1.
+
+### Đo xem có ích thật không
+
+Mesh hai bên dựng cùng công thức (`meshkit.Params()`, Poisson depth 9) và chấm
+trên **cùng một** đám mây tham chiếu — đám mây cổ điển. Chấm mỗi mesh bằng đám
+mây của chính nó là để cho điểm suy diễn tự bảo lãnh cho mặt do nó sinh ra.
+
+**A. Depth map photometric** (đúng cái `PRESET=fast` sinh ra), 240 ảnh, `vits`:
+
+| | cổ điển | có bù |
+|---|---|---|
+| điểm | 1.227.986 | 1.229.194 (+0,10 %) |
+| mặt | 61.558 | 61.900 |
+| kín | có | có |
+| sai lệch RMS % | 0,6192 ±0,0023 | 0,6372 ±0,0023 |
+| độ phủ | 0,8910 | 0,8909 |
+| không được đỡ | 0,2410 ±0,0006 | 0,3069 ±0,0009 |
+| điểm meshkit | 31,84 | 28,73 |
+
+**B. Depth map geometric** (chạy thêm lượt `geom_consistency` trên một bản sao):
+
+| | cổ điển | có bù |
+|---|---|---|
+| điểm | 928.672 | 936.747 (+0,87 %) |
+| mặt | 69.552 | 69.650 |
+| kín | có | có |
+| sai lệch RMS % | 0,5539 ±0,0014 | 0,5512 ±0,0020 |
+| độ phủ | 0,5689 | 0,5690 |
+| không được đỡ | 0,2406 ±0,0008 | 0,2408 ±0,0003 |
+| điểm meshkit | 19,50 | 19,52 |
+
+### Đừng tin bảng trên: nó nằm dưới sàn nhiễu
+
+Hai bảng đó nói ngược nhau, nên phải làm phép đối chứng rỗng: chạy lại đúng
+pipeline với `--max-fill 0`, tức **không lấp một pixel nào**, chỉ fuse lại
+workspace cũ. `stereo_fusion` chạy đa luồng nên đám mây lệch đi *chín điểm* trên
+1,23 triệu. Kết quả:
+
+| | cổ điển (mesh cache) | fuse lại, KHÔNG bù gì |
+|---|---|---|
+| điểm | 1.227.986 | 1.227.977 (−9) |
+| không được đỡ | 0,2405 | **0,2795** |
+| điểm meshkit | 31,89 | **29,99** |
+
+Chín điểm trên 1,23 triệu làm `unsupported` nhảy 0,039 và điểm meshkit rơi 1,9 —
+lớn hơn toàn bộ khác biệt giữa cổ điển và có bù. Qua năm lượt fuse cùng một bộ
+dữ liệu, con số đó chạy từ 0,23 tới 0,31. Nguyên nhân: Poisson là một phép giải
+toàn cục rồi cắt tỉa, hỗn loạn theo tập điểm đầu vào. **Mọi so sánh ở mức mesh
+dưới ±0,08 đều vô nghĩa**, kể cả những dòng có độ lệch chuẩn đẹp đẽ ±0,002 —
+độ lệch đó chỉ đo việc lấy mẫu bề mặt, không đo việc dựng lại mesh.
+
+Nên `neural_depth.py` báo thêm một phép so **tất định**, không qua Poisson:
+khoảng cách từ mỗi điểm trong đám mây có bù tới điểm ĐO ĐƯỢC gần nhất.
+
+| | A (photometric) | B (geometric) |
+|---|---|---|
+| điểm xa hơn 0,4 % cỡ vật | 37 / 1.229.194 (0,003 %) | 855 / 936.747 (0,091 %) |
+| khoảng cách đó, trung vị | 0,466 % | 0,642 % |
+| p95 | 0,632 % | 1,052 % |
+
+Đây mới là câu trả lời: phần bù **không** treo lơ lửng. Gần như toàn bộ điểm suy
+diễn nằm sát ngay bề mặt đã đo, chỉ 0,003–0,09 % trôi ra xa và cũng chỉ xa
+khoảng 0,5–1 % cỡ vật. Kiểm tra nhất quán đa góc nhìn của `stereo_fusion` đã làm
+đúng việc của tuyến phòng thủ thứ hai.
+
+### Nhận định thẳng
+
+**Cơ chế chạy đúng; trên rig này nó gần như không có việc để làm.**
+
+1. Phép khớp tỉ lệ hoạt động tốt hơn mong đợi: inlier trung vị **95–97 %**, sai
+   số tương đối trung vị **0,46–0,58 %**. 240/240 khung đạt ngưỡng, không khung
+   nào phải bỏ. Phần khó nhất của bài toán không phải chỗ yếu.
+2. Nhưng lỗ thì gần như không có. `PRESET=fast` chỉ sinh depth map
+   *photometric*, mà patch match photometric gán độ sâu cho **gần như mọi
+   pixel** — lọc thật diễn ra sau, lúc fusion. Lỗ thật trong mask: **0,072 %**
+   khung hình. Chạy thêm lượt `geom_consistency` mới ra lỗ thật (0,47 % khung
+   hình, nằm đúng trên vỏ kim loại cổng USB/Ethernet như dự đoán) — vẫn chỉ
+   **+0,87 %** số điểm.
+3. Ở mức mesh thì không đo được gì, vì bước Poisson nhiễu gấp mười lần hiệu ứng
+   cần đo.
+
+Nói gọn: **không có bằng chứng nào cho thấy nó làm mesh tốt lên, cũng không có
+bằng chứng nào cho thấy nó làm hỏng.** Nó thêm 0,1–0,9 % số điểm, đặt đúng chỗ,
+và biến mất trong nhiễu. Với 240 ảnh quanh một vật, hình học đã đo đủ dày; tiên
+nghiệm học sẵn không thêm được gì mà số liệu khách quan chịu công nhận.
+
+Chỗ nó *có thể* đáng dùng — chưa có bộ ảnh nào để kiểm chứng — là bộ thưa
+(30–50 khung) hoặc vật thật sự trơn bóng, tức đúng cái tình huống mà phần
+"holes" chiếm hàng chục phần trăm khung hình chứ không phải nửa phần trăm. Giữ
+lại như một lựa chọn phụ, **không** đưa vào đường mặc định của `recon.sh`.
+
+Cách tái lập bảng B (cây song song, không đụng vào kết quả cổ điển):
+
+```bash
+G=projects/2geom/workspace/dense; D=projects/2/workspace/dense
+mkdir -p $G/stereo && cp -al $D/images $G/images && cp -al $D/sparse $G/sparse
+cp -a $D/stereo/{depth_maps,normal_maps} $G/stereo/    # copy, KHÔNG hard link:
+cp $D/stereo/{patch-match.cfg,fusion.cfg} $G/stereo/   # pass 2 sẽ ghi đè
+mkdir -p $G/stereo/consistency_graphs
+./colmap.sh patch_match_stereo --workspace_path /working/$G \
+  --PatchMatchStereo.geom_consistency true \
+  --PatchMatchStereo.num_iterations 3 --PatchMatchStereo.num_samples 8 \
+  --PatchMatchStereo.window_radius 3 --PatchMatchStereo.filter_min_ncc 0.15
+./colmap.sh stereo_fusion --workspace_path /working/$G --input_type geometric \
+  --StereoFusion.min_num_pixels 5 --output_path /working/$G/fused.ply
+./.venv/bin/python neural_depth.py projects/2geom
+```
+
+COLMAP bỏ qua ảnh nào đã có depth map, nên chép sẵn bản photometric vào là nó
+chỉ chạy lượt hai: ~11 phút cho 240 ảnh ở 700 px thay vì gấp đôi.
+
+Chi phí: ~28 s suy luận (240 ảnh, RTX 2080 Ti, `vits`, batch 8) + ~22 s fusion +
+~1 phút dựng mesh so sánh. Cây `workspace/neural/` (~2 GB) tự xoá sau fusion,
+giữ lại bằng `--keep-workspace`.
